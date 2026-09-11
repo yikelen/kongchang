@@ -1,242 +1,262 @@
-# 简易控场
+<p align="center">
+  <img src="assets/app_v3.png" width="96" alt="简易控场 logo">
+</p>
 
-年会 / 活动用的 Windows 单机控场软件。画面 2 操作，画面 1 给 PPT（本程序不翻页）。音视频一律本机 **mpv** 播放，程序自己不解码。
+<h1 align="center">简易控场</h1>
+
+<p align="center">
+  <b>Windows 活动 / 年会现场音视频控场软件</b><br>
+  节目单编排 · 双屏投影 · 临时配乐叠播 · JSON 工程（可给 AI 生成）
+</p>
+
+<p align="center">
+  <a href="https://github.com/yikelen/kongchang/releases/latest"><img src="https://img.shields.io/github/v/release/yikelen/kongchang?label=Release&color=1b6b42" alt="release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"></a>
+  <img src="https://img.shields.io/badge/Platform-Windows%20x64-0078D6" alt="Windows">
+  <img src="https://img.shields.io/badge/Stack-PySide6%20%2B%20mpv-111111" alt="stack">
+</p>
+
+<p align="center">
+  <a href="https://github.com/yikelen/kongchang/releases/latest"><b>⬇ 下载 Windows 便携版</b></a>
+  ·
+  <a href="#界面说明">界面说明</a>
+  ·
+  <a href="#功能特性">功能特性</a>
+  ·
+  <a href="AGENTS.md">给 AI Agent</a>
+  ·
+  <a href="examples/demo_show.json">文字演示工程</a>
+</p>
 
 ---
 
-## 怎么开（最省事）
+## 它解决什么问题
 
-下载 Release 便携包（含 `vendor`，**不用装 Python**）：
+现场常见做法是：PPT 在一块屏翻页，音视频另开播放器——容易播错、切错屏、讲话时垫乐盖过人声。
 
-**https://github.com/yikelen/kongchang/releases/latest**
+**简易控场**把「节目单 + 播放 + 投影」收成一个 Windows 小工具：
 
-1. 下载 `kongchang-windows-portable-*.zip` 并解压  
-2. 进入 `kongchang` 文件夹，双击 `启动.bat`  
-3. 演示：工程 → 打开 → `examples\demo_show.json`
-
-不要用 `.venv`。本机设置在 `data/settings.json`（**不要提交到 Git**）。
+- 操作台在一块屏，视频全屏投到另一块屏
+- **不控制 PPT 翻页**（PPT 仍由你自己播）
+- 音视频用自带 **mpv** 解码，程序只负责控场逻辑
 
 ---
 
-## 从 GitHub 源码运行（开发 / 开源克隆）
+## 界面说明
 
-仓库**默认不包含** `vendor`（便携 Python/Qt/mpv，约 350MB+）。
+主窗口分区如下（编号与下图对应）：
 
-**一键准备（需已安装任意 Python 3.11+，仅首次下载用）：**
+![主界面分区标注](docs/screenshots/ui-annotated.png)
+
+| 编号 | 区域 | 作用 |
+|:---:|------|------|
+| **①** | **菜单栏** | `工程`：新建 / 打开 / 保存；`全屏投影到`：选择观众屏；`帮助`：关于与说明 |
+| **②** | **节目单** | 本场演出顺序：音频 / 视频 / 备注；正在播黄色高亮，选中绿色 |
+| **③** | **节目单操作** | 添加条目、上移 / 下移、删除；改完约 1.5 秒自动保存 |
+| **④** | **临时媒体** | 应急垫乐、过场片；按「分类」分组，与节目单互不干扰 |
+| **⑤** | **临时播放** | 临时区独立五键：播放 / 停止 / 暂停 / 全屏 / 收起 + 进度 / 音量 |
+| **⑥** | **主播放控制** | 跟节目单：预览 → 播放、停止、暂停、全屏、收起 |
+| **⑦** | **进度 / 音量** | 主通道进度条与音量；本机记住音量 |
+
+未标注截图（干净版）：
+
+![主界面](docs/screenshots/ui-overview.png)
+
+| 节目单局部 | 临时媒体局部 | 底栏控制 |
+|:---:|:---:|:---:|
+| ![节目单](docs/screenshots/cues.png) | ![临时媒体](docs/screenshots/library.png) | ![底栏](docs/screenshots/transport.png) |
+
+---
+
+## 功能特性
+
+### ① 菜单栏
+
+| 功能 | 说明 |
+|------|------|
+| 工程 → 新建 / 打开 / 保存 | 一份活动 = 一份 `.json` + 同目录媒体；`Ctrl+S` 立即保存 |
+| 全屏投影到 | 下拉列出显示器，会标「本软件 / 推荐」，避免盖住操作台 |
+| 帮助 | 版本与简要说明 |
+
+### ②③ 节目单（左侧）
+
+| 功能 | 说明 |
+|------|------|
+| 三种条目 | **音频** / **视频** / **备注**（备注只作提词，不可播） |
+| 拖拽或按钮排序 | 现场可临时调整顺序 |
+| 缺文件提示 | 媒体还没拷齐也能先排单，列表标「缺文件」 |
+| 正在播高亮 | 播放中黄色，选中绿色，方便对词 |
+| 自动保存 | 改单后约 1.5 秒落盘 |
+
+### ⑥⑦ 底栏主播放（跟节目单）
+
+| 功能 | 说明 |
+|------|------|
+| 预览 → 播放 | 视频先出预监小窗（暂停），确认无误再点播放 |
+| 停止 / 暂停 | 停止可渐停；暂停 / 继续 |
+| 全屏 / 收起 | 投到菜单所选投影屏；可收回预监 |
+| 进度 / 音量 | 可拖进度；音量本机记住 |
+
+主按钮会随选中条目变化：
+
+| 选中状态 | 绿色主按钮 | 含义 |
+|----------|------------|------|
+| 备注 | 播放（灰） | 不可播 |
+| 视频未预监 | **预览** | 小窗暂停，不投屏 |
+| 视频已预监 | **播放** | 开播到投影屏 |
+| 正在播 | 播放中 | — |
+| 已暂停 | 重新播放 | 旁侧「继续」接着播 |
+
+键盘（控场窗 / 预监 / 全屏）：`Space` 暂停 · `←→` 进度 · `↑↓` 音量 · `Esc` 关视频 · `Enter` 全屏
+
+### ④⑤ 临时媒体（右侧，与节目单独立）
+
+| 功能 | 说明 |
+|------|------|
+| 音视频同表 | 用「分类」分组（如过场、颁奖、视频） |
+| 独立五键 + 进度音量 | 不跟底栏抢控制 |
+| 音频可叠视频 | 无声片可垫乐；叠播时暂静音视频轨 |
+| 视频全局互斥 | 节目单与临时区同时只播一个视频 |
+| 选中即接管 | 点列表条目后，临时区按钮控制该条目 |
+
+### 工程与 AI
+
+| 功能 | 说明 |
+|------|------|
+| JSON 工程 | 一份 `活动名.json` + 相对路径媒体即可带走 |
+| 可给 AI 生成 | 字段少、容错；见下方 [工程文件格式](#工程文件格式) 与 [`AGENTS.md`](AGENTS.md) |
+| 文字演示 | [`examples/demo_show.json`](examples/demo_show.json) 无需任何 mp3/mp4 |
+
+---
+
+## 安装
+
+### 方式 A：便携包（推荐，免装 Python）
+
+1. 打开 [Releases](https://github.com/yikelen/kongchang/releases/latest)
+2. 下载 `kongchang-windows-portable-*.zip` 并解压到本地盘（如 `D:\kongchang`）
+3. 双击 **`启动.bat`**
+
+若提示 Qt / DLL 错误，先安装 [VC++ 2015–2022 x64](https://aka.ms/vs/17/release/vc_redist.x64.exe) 再开。
+
+### 方式 B：从源码克隆
+
+仓库不含 `vendor`（约 350MB）。需要本机有 **Python 3.11+** 仅用于首次下载：
 
 ```bat
+git clone https://github.com/yikelen/kongchang.git
+cd kongchang
 一键准备运行环境.bat
 启动.bat
 ```
 
-或手动：
+或无人值守（给 Agent）：
 
-```bat
-py -3 scripts\setup_portable_python.py
-py -3 scripts\download_mpv.py
-启动.bat
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\agent_bootstrap.ps1
+.\启动.bat
 ```
-
-**文字演示（无需音视频文件）：** 工程 → 打开 → `examples\demo_show.json`
-
-也可把完整 `vendor` 打成 zip，作为 **GitHub Release** 附件；解压到仓库根目录后即可直接 `启动.bat`。
-
-**给 AI Agent：** 见根目录 [`AGENTS.md`](AGENTS.md)（如何下载依赖、启动、打开演示）。用户可直接说「按 AGENTS.md 帮我安装并打开」。
-
-许可证：**MIT**（可自由使用、修改、商用）。隐私与忽略项见 `SECURITY.md`。
-
-### 拷到别的电脑有的能开、有的报 Qt / DLL 错
-
-报错类似 `DLL load failed while importing QtWidgets` / `找不到指定的程序` 时：
-
-1. **整夹拷贝**：必须含 `vendor\python`、`vendor\mpv`、`src`、`启动.bat`。
-2. **系统要求**：64 位 Windows 10 / 11（32 位不行）。
-3. **安装微软运行库（最常见）**：在打不开的电脑上安装  
-   [VC++ 2015–2022 x64](https://aka.ms/vs/17/release/vc_redist.x64.exe) ，装完再开 `启动.bat`。
-4. 尽量放到本地盘短路径（如 `D:\控场`），避免只在网盘同步目录里运行。
-5. 仍不行：双击 **`环境检测.bat`**，把窗口内容或 `data\diagnose.txt` 发回排查。
-
-软件已内置便携 Python / Qt / mpv；缺的通常是目标电脑的 **VC++ 系统运行库**，不是再装一份 Python。
 
 ---
 
-## 工程怎么放、怎么导入
+## 快速体验
 
-一份工程就是 **一个文件夹 + 一份 json**。文件名自定，**可以用中文**，不必叫 `show.json`。媒体用相对路径，和 json 放在一起。
+1. 启动软件  
+2. **工程 → 打开 / 导入…** → 选择 [`examples/demo_show.json`](examples/demo_show.json)  
+3. 对照上方 [界面说明](#界面说明) 浏览左侧节目单与右侧临时列表（演示为文字占位，可稍后补媒体）
 
-```
+---
+
+## 现场怎么用（简要）
+
+1. 菜单栏 **①** 选择 **全屏投影到**「推荐」那块屏（不要选标「本软件」的）  
+2. 打开本场 `活动.json`  
+3. 按节目单 **②** 顺序操作底栏 **⑥**；需要垫乐时用右侧临时音频 **④⑤**  
+4. PPT 仍在另一块屏由主持人 / 电脑自己翻页  
+
+---
+
+## 工程文件格式
+
+一份工程 = **一个文件夹 + 一份 json**（文件名可用中文）：
+
+```text
 2026年会/
-  2026年会.json       ← 工程（打开 / 导入这个文件）
+  2026年会.json
   audio/
     warmup.mp3
-    transition.mp3
   video/
-    national_anthem.mp4
+    opening.mp4
 ```
 
-**导入：** 菜单 **工程 → 打开 / 导入…**，选这份 json。  
-也可以让 AI 按下面的格式生成，保存成活动名（如 `2026年会.json`、`百日大战.json`）后直接打开。软件里「+ 音频 / + 视频 / + 备注」也可以先排顺序，媒体文件之后在「编辑选中 → 浏览媒体」里补。  
-**另存为** 会写出带 `index` / `id` 的完整文件，再拿去给 AI 改、再导入都可以。
+`path` 相对 **json 所在目录**。音视频可暂空 path（列表标「缺文件」）。备注条不要 path。
 
-路径规则：
+最小示例：
 
-- `path` 相对 **json 所在目录**，用正斜杠：`audio/warmup.mp3`（反斜杠也会被转成正斜杠）
-- 也可以写绝对路径
-- 音视频可以暂时不写 `path`（列表会标「缺文件」，不崩）
-- 备注条没有媒体，`path` 留空或不写
+```json
+{
+  "version": 1,
+  "cues": [
+    { "type": "note", "name": "【待命】会前", "notes": "等入场" },
+    { "type": "audio", "name": "暖场", "notes": "PPT p1", "path": "audio/warmup.mp3" },
+    { "type": "video", "name": "开场片", "notes": "全屏", "path": "video/opening.mp4", "loop": false }
+  ]
+}
+```
 
----
+更多字段说明、容错规则、给 AI 的提示词模板见下方折叠内容与 [`AGENTS.md`](AGENTS.md)。
 
-## 工程 json 格式（给人和 Agent）
-
-这份 JSON **对 AI 生成友好**：字段少、能省略的都可以省略，写错一点也能打开。
-
-播放顺序 = `cues` **数组从上到下**。根上只要 `version: 1` 和 `cues`。`library`（临时媒体）可写可不写。
+<details>
+<summary><b>JSON 字段与容错（点击展开）</b></summary>
 
 | 字段 | 必填 | 说明 |
 |------|------|------|
-| `type` | 是 | `audio` / `video` / `note`，也可用 `音频` / `视频` / `备注` |
-| `name` | 建议 | 列表里显示的名称 |
-| `notes` | 否 | 现场口令、PPT 页码等 |
-| `path` | 否 | 相对本 json 的媒体路径。没有文件也可以先空着；备注条不要写 |
-| `loop` | 否 | 是否循环。**音频不写则默认 `true`**，视频默认 `false` |
-| `category` / `分类` | 否 | **临时列表音频**用：同分类归在一起显示（如 `颁奖`、`茶歇`、`过场`）。空则归入「未分类」 |
-| `index` | 否 | 仅方便阅读。写了就按 `index` 排序，没写按数组顺序。软件保存时会自动写成 1、2、3 |
-| `id` | 否 | 运行时用来认「哪一条正在播」。**可省略**，打开时自动生成。不要两条重复 |
+| `type` | 是 | `audio` / `video` / `note`（也可用中文） |
+| `name` | 建议 | 列表显示名 |
+| `notes` | 否 | 现场口令、PPT 页码 |
+| `path` | 否 | 相对 json 的媒体路径 |
+| `loop` | 否 | 音频默认循环；视频默认否 |
+| `category` | 否 | 临时列表分类 |
+| `index` / `id` | 否 | 可省略，软件会补 |
 
-AI 常漏 / 写错时，软件会这样消化（不会崩）：
+音频不写 `loop` → 默认循环；路径反斜杠会转成正斜杠；多写的字段会忽略。
 
-| 情况 | 软件怎么处理 |
-|------|----------------|
-| 不写 `id` | 打开时自动生成 |
-| 不写 `index` | 按 `cues` 数组从上到下 |
-| `type` 写成「音频 / 视频 / 备注」 | 能认 |
-| 音视频暂时没有 `path` | 能打开，名称旁标「缺文件」，之后在编辑里补 |
-| 音频不写 `loop` | 默认循环 |
-| 视频不写 `loop` | 默认不循环 |
-| 路径用了反斜杠 `\` | 转成 `/` |
-| 多写了别的字段 | 忽略 |
-| `path` 对不上真实文件 | 列表标「缺文件」，点播放会提示 |
-
-`id` 只影响「正在播放」高亮和暂停/重播时认同一条。缺了会自动补；重复会导致认错行。给人看、给 AI 写都可以不写。
-
-最小可导入示例：
-
-```json
-{
-  "version": 1,
-  "cues": [
-    {
-      "name": "【待命】会前",
-      "type": "note",
-      "notes": "PPT未开场；等入场"
-    },
-    {
-      "name": "暖场_励志床",
-      "type": "audio",
-      "notes": "PPT p1 封面/入场",
-      "path": "audio/warmup.mp3"
-    },
-    {
-      "name": "国歌_MV视频",
-      "type": "video",
-      "notes": "PPT p3；全屏投影",
-      "path": "video/national_anthem.mp4",
-      "loop": false
-    }
-  ]
-}
-```
-
-也可以先只排结构、不写 `path`，媒体后补：
-
-```json
-{
-  "version": 1,
-  "cues": [
-    { "type": "note", "name": "【待命】会前", "notes": "PPT未开场" },
-    { "type": "audio", "name": "暖场", "notes": "PPT p1" },
-    { "type": "video", "name": "国歌", "notes": "PPT p3；全屏", "loop": false }
-  ]
-}
-```
-
-给 Agent 的生成要求（可直接贴进提示词）：
-
-```
-只输出一份 UTF-8 的 json，version 为 1。
-文件名用这场活动的名字，可用中文，例如 2026年会.json，不必叫 show.json。
-cues 按演出顺序。type 用 audio / video / note（也可用 音频 / 视频 / 备注）。
-不必写 id；index 可选。
-音视频 path 相对 json 所在目录（如 audio/warmup.mp3）；没有文件也可以先空着。
-备注条不要 path，用 notes 写清 PPT 页和现场口令。
-暖场 / 过场音乐一般循环（可不写 loop）；MV、节目视频 loop: false。
-不要输出 markdown 代码围栏以外的解释。
-```
+</details>
 
 ---
 
-## 现场操作（简要）
+## 给 AI Agent
 
-底栏会按当前条目变文案。
+用户若说「帮我安装并打开这个软件」，请 Agent 阅读并执行：
 
-| 选中 | 绿色主按钮 | 含义 |
-|------|------------|------|
-| 备注 | 播放（灰色） | 点不了；停止/暂停/全屏也灰掉 |
-| 视频（未出预监） | 预览 | 只开小窗，暂停，不投屏 |
-| 视频（小窗已出） | 播放 | 开始播 |
-| 音/视频正在播 | 播放中 | |
-| 音/视频已暂停 | 重新播放 | 从头再来；旁边「继续」从暂停处接着播 |
-| 音频已停止 | 播放 | 从头再来 |
+**[`AGENTS.md`](AGENTS.md)**
 
-- **全屏**：预监小窗投到菜单栏「全屏投影到」所选的屏幕，不自动开播。小窗里按 Enter 也是全屏。下拉里会标明「控制软件在这」，请选标了「推荐」的另一块屏。
-- **收起全屏**：退回预监小窗，不关播放器。
-- 进度条可拖可点跳转；右侧音量推子同时管当前音频/视频，本机记住。
-- 改节目单后约 1.5 秒自动保存；`Ctrl+S` 仍可立刻保存。
-- 正在播的那一行列表里是黄色；选中行是绿色。
-- 本窗口或预监/全屏窗：空格播放/暂停，←→ 进度，↑↓ 音量，Esc 关视频。不再抢其它软件的键盘。
+其中包含：如何下载 `vendor`、如何启动、如何打开演示、禁止提交的本地文件等。
 
 ---
 
-## 架构
+## 技术架构
 
-```
-控场/
-  启动.bat                 用项目内 vendor\python\pythonw 启动（无黑框）
-  vendor/python/          自带便携 CPython + PySide6，不查系统 Python
-  vendor/mpv/             自带 mpv，不查系统 PATH
-  data/                   本机设置（投影屏、上次工程、最近打开）
-  src/
-    main.py               入口、单实例
-    models.py             工程 / cue / json 读写
-    controller.py         播放、暂停、渐停、全屏
-    mpv_ipc.py            和 mpv 的 JSON IPC
-    settings.py           data/settings.json
-    paths.py              程序根目录、mpv、热键 conf
-    instance.py           只开一份；再开一次会唤起已有窗口，不杀正在播的场
-    winjob.py             主进程死则 mpv 一起停
-    ui/main_window.py     界面（含「全屏投影到」）
+```text
+kongchang/
+  启动.bat                 闪屏 + 启动 GUI
+  vendor/python/           便携 CPython + PySide6（发行包装有；源码仓用脚本下载）
+  vendor/mpv/              便携 mpv
+  examples/demo_show.json  文字演示
+  src/                     源码（PySide6 UI + mpv IPC）
+  AGENTS.md                Agent 安装协议
 ```
 
-数据分两块：
-
-- **工程** `*.json`（文件名自定，可用中文）：cue 列表，跟活动走，可拷贝、可给 AI 生成。
-- **本机设置** `data/settings.json`：投影屏（按显示器名称记住）、上次打开、最近列表。不进工程文件。
-
-播放：本程序只发 IPC（加载、暂停、音量、全屏到 `fs-screen`）。解码和窗口都是 `vendor/mpv/mpv.exe`。
-
-**临时媒体与底栏节目单独立：**
-
-- 右侧临时列表可同时放**音频 + 视频**（有类型列），用分类分组；样式接近节目单，但不参与排序演出。
-- 独立五键：播放 / 停止 / 暂停 / 全屏 / 收起全屏（顺序同底栏），带进度与时长。
-- 临时**音频**可叠在视频上（会暂静音视频轨）；临时**视频**与节目单视频互斥，同时只播一个（后点的会顶掉先开的）。
-- 底栏只跟节目单，不显示、不操作临时列表。
+- 工程：`*.json`（跟活动走）  
+- 本机设置：`data/settings.json`（投影屏、最近打开等，不进 Git）  
+- 播放：进程只发 IPC；解码与窗口由 `mpv.exe` 完成  
 
 ---
 
-## 开发注意
+## 贡献与协议
 
-- 改完用 `启动.bat` 看效果。
-- `启动.bat` 必须是 Windows 换行（CRLF），否则双击会闪退且程序起不来。
-- 重建便携 Python（只需打包机有任意 Python 3.11+）：`py -3 scripts\setup_portable_python.py`
-- 未处理异常会弹窗，并写到 `data/crash.log`。
+- Issue / PR 欢迎  
+- 请勿提交 `data/settings.json`、真实活动名单、或整个 `vendor/` 进 Git 历史  
+- 许可证：[MIT](LICENSE)（可自由使用、修改、商用）  
+
+隐私与忽略清单：[SECURITY.md](SECURITY.md)
