@@ -43,6 +43,8 @@ py -3 scripts\download_mpv.py
 
 也可把完整 `vendor` 打成 zip，作为 **GitHub Release** 附件；解压到仓库根目录后即可直接 `启动.bat`。
 
+**给 AI Agent：** 见根目录 [`AGENTS.md`](AGENTS.md)（如何下载依赖、启动、打开演示）。用户可直接说「按 AGENTS.md 帮我安装并打开」。
+
 许可证：**MIT**（可自由使用、修改、商用）。隐私与忽略项见 `SECURITY.md`。
 
 ### 拷到别的电脑有的能开、有的报 Qt / DLL 错
