@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "readme": "文字演示工程：全部为备注/占位，不依赖真实音视频文件。用「工程→打开」导入本文件即可浏览流程。",
+  "cues": [
+    {
+      "name": "【待命】会前",
+      "type": "note",
+      "notes": "演示：PPT 未开场，等人入座。本条无媒体。"
+    },
+    {
+      "name": "暖场（示例）",
+      "type": "note",
+      "notes": "演示：正式场合这里会播循环暖场音乐。可后补 audio 类型并指定 path。"
+    },
+    {
+      "name": "开场视频（示例）",
+      "type": "note",
+      "notes": "演示：正式场合这里是视频全屏。可后补 video 类型；path 相对本 json 目录。"
+    },
+    {
+      "name": "过场 → 致辞",
+      "type": "note",
+      "notes": "演示：过场垫乐，进致辞页前 STOP。"
+    },
+    {
+      "name": "致辞",
+      "type": "note",
+      "notes": "演示：讲话环节保持静音，勿垫乐。"
+    },
+    {
+      "name": "茶歇",
+      "type": "note",
+      "notes": "演示：茶歇轻垫；复会前 STOP。"
+    },
+    {
+      "name": "节目 / 颁奖（示例）",
+      "type": "note",
+      "notes": "演示：可按场次继续加备注条，或换成真实 audio/video。"
+    },
+    {
+      "name": "收尾 / 散场",
+      "type": "note",
+      "notes": "演示：散场垫乐。导入后可在右侧「临时媒体」练习分类与独立播放（需自备媒体）。"
+    }
+  ],
+  "library": [
+    {
+      "name": "示例·过场垫（无文件）",
+      "type": "audio",
+      "category": "过场",
+      "notes": "占位：补 path 后可在临时区试播",
+      "path": "",
+      "loop": true
+    },
+    {
+      "name": "示例·开场片（无文件）",
+      "type": "video",
+      "category": "视频",
+      "notes": "占位：补 path 后可预览/全屏",
+      "path": "",
+      "loop": false
+    }
+  ]
+}

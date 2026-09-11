@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local runtime (absolute paths, usernames, window layout, etc.)
+/data/*
+!/data/.gitkeep
+
+# Bundled runtimes — do NOT push to GitHub (~350MB+)
+# Dev/users: scripts/setup_portable_python.py + scripts/download_mpv.py
+# Or attach vendor/ as a GitHub Release asset.
+vendor/python/
+vendor/mpv/
+vendor/_mpv_extract/
+vendor/mpv-win.zip
+
+# Build / packaging
+build/
+dist/
+便携版/
+*.egg-info/
+
+# Local shortcuts / pid / splash flags
+*.lnk
+*.pid
+splash.close
+splash.pid
+**/crash.log
