@@ -4,19 +4,17 @@
 
 ---
 
-## 怎么开（完整发行夹）
+## 怎么开（最省事）
 
-若你拿到的是**含 `vendor`** 的完整文件夹：
+下载 Release 便携包（含 `vendor`，**不用装 Python**）：
 
-```
-双击 启动.bat
-```
+**https://github.com/yikelen/kongchang/releases/latest**
 
-不用装系统 Python。拷给别人时请整夹拷走（含 `vendor\python`、`vendor\mpv`）。
+1. 下载 `kongchang-windows-portable-*.zip` 并解压  
+2. 进入 `kongchang` 文件夹，双击 `启动.bat`  
+3. 演示：工程 → 打开 → `examples\demo_show.json`
 
-不要用 `.venv`：虚拟环境会写死原电脑路径。运行时只用文件夹里的 `vendor\python`。
-
-本机设置在 `data/settings.json`（含最近工程路径等，**不要提交到 Git**）。
+不要用 `.venv`。本机设置在 `data/settings.json`（**不要提交到 Git**）。
 
 ---
 

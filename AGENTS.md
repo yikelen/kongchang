@@ -10,11 +10,37 @@
 
 | 情况 | 你怎么做 |
 |------|----------|
+| 用户只要「能打开用」 | **优先**下载 Release 便携包（第 0.1 节），解压后启动 |
 | 已有完整文件夹，且存在 `vendor\python\pythonw.exe` 与 `vendor\mpv\mpv.exe` | **跳过下载**，直接启动（第 3 节） |
-| 刚 `git clone` 的源码，没有 `vendor\python` 或没有 `vendor\mpv` | 先做第 1–2 节准备环境，再启动 |
+| 刚 `git clone` 的源码，没有 `vendor` | 第 1–2 节 bootstrap，或改下 Release 包 |
 | 用户只要「看看演示」 | 启动后导入 `examples\demo_show.json`（第 4 节） |
 
 **不要**把用户本机的 `data\settings.json`、真实活动工程 json、或含人名客户的素材提交回 Git。
+
+### 0.1 推荐：下载 GitHub Release 便携包（免装 Python）
+
+```powershell
+# 在用户选定的目录（如 D:\）执行
+$rel = gh release download -R yikelen/kongchang -p "kongchang-windows-portable-*.zip" -D .
+# 若无 gh，用浏览器打开：
+# https://github.com/yikelen/kongchang/releases/latest
+# 下载 kongchang-windows-portable-*.zip
+
+Expand-Archive .\kongchang-windows-portable-*.zip -DestinationPath .
+cd kongchang
+Start-Process -FilePath ".\启动.bat" -WorkingDirectory (Get-Location)
+```
+
+无 `gh` 时也可用：
+
+```powershell
+Invoke-WebRequest -Uri "https://github.com/yikelen/kongchang/releases/latest/download/kongchang-windows-portable-v0.1.0.zip" -OutFile "kongchang-windows-portable.zip"
+Expand-Archive .\kongchang-windows-portable.zip -DestinationPath .
+cd kongchang
+Start-Process .\启动.bat
+```
+
+（版本号以 Release 页最新文件名为准。）
 
 ---
 
