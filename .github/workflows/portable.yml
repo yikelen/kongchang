@@ -30,10 +30,13 @@ jobs:
       - name: Zip
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
+          # robocopy 成功复制也返回 1，PowerShell 7 会当成失败
+          $PSNativeCommandUseErrorActionPreference = $false
           $name = "kongchang-windows-portable-${{ github.ref_name }}"
           if ($name -eq "kongchang-windows-portable-") { $name = "kongchang-windows-portable-dev" }
           New-Item -ItemType Directory -Force -Path pack | Out-Null
-          robocopy . "pack\kongchang" /E /XD .git pack .github __pycache__ .venv /XF *.pyc *.pid splash.close
+          & robocopy . "pack\kongchang" /E /NFL /NDL /NJH /NJS /XD .git pack .github __pycache__ .venv /XF *.pyc *.pid splash.close
           if ($LASTEXITCODE -ge 8) { throw "robocopy failed $LASTEXITCODE" }
           Compress-Archive -Path "pack\kongchang" -DestinationPath "$name.zip" -Force
           echo "ASSET=$name.zip" >> $env:GITHUB_ENV
