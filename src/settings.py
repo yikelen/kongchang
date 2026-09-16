@@ -48,6 +48,9 @@ class AppSettings:
     output_volume: int = 100
     library_volume: int = 100
     theme: str = "dark"
+    desktop_shortcut_created: bool = False
+    show_mode: bool = False
+    audio_device: str = ""
 
     def resolved_mpv(self) -> Path:
         raw = (self.mpv_path or "").strip()
@@ -93,6 +96,9 @@ class AppSettings:
                 data["library_volume"] if "library_volume" in data else data.get("output_volume")
             ),
             theme=_theme_name(data.get("theme")),
+            desktop_shortcut_created=bool(data.get("desktop_shortcut_created")),
+            show_mode=bool(data.get("show_mode")),
+            audio_device=str(data.get("audio_device") or ""),
         )
 
     def set_projection(self, index: int, device: str) -> None:

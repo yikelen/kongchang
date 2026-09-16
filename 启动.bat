@@ -15,8 +15,20 @@ set "QT_QPA_PLATFORM_PLUGIN_PATH=%~dp0vendor\python\Lib\site-packages\PySide6\pl
 
 if not exist "%PYW%" (
   echo Portable Python missing. Trying to download into vendor\python ...
-  py -3 "%~dp0scripts\setup_portable_python.py"
-  if not exist "%PYW%" python "%~dp0scripts\setup_portable_python.py"
+  echo 第一次启动要下载便携 Python 和界面库，请等它打印「完成」。
+  echo.
+  where py >nul 2>&1
+  if %ERRORLEVEL%==0 (
+    py -3 -u "%~dp0scripts\setup_portable_python.py"
+  ) else (
+    python -u "%~dp0scripts\setup_portable_python.py"
+  )
+  if errorlevel 1 (
+    echo.
+    echo 准备运行环境失败。可改双击「一键准备运行环境.bat」查看完整输出。
+    pause
+    exit /b 1
+  )
 )
 
 if exist "%PYW%" if exist "%RUN%" (
@@ -34,5 +46,7 @@ if exist "%PYW%" if exist "%APP%" (
   exit /b 0
 )
 
-mshta "javascript:alert('找不到 vendor\\python。请拷贝整个「控场」文件夹，不要只拷 src。');close();"
+echo 找不到 vendor\python\pythonw.exe。
+echo 请拷贝整个「控场」文件夹，不要只拷 src；或双击「一键准备运行环境.bat」。
+pause
 exit /b 1

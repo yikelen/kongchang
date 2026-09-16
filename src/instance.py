@@ -147,9 +147,12 @@ def take_over() -> bool:
     """已有实例则把它唤到前台，返回 False 表示本进程应退出。"""
     if _send_existing(b"raise\n"):
         return False
-    old = _read_old_pid()
-    if old and old != os.getpid():
-        _terminate(old)
-    kill_leftovers(os.getpid())
+    # 只清本软件残留的 mpv，不要扫杀其它 pythonw
+    keep = {os.getpid(), os.getppid()}
+    for pid, command in _wmi_processes("mpv.exe"):
+        if pid in keep:
+            continue
+        if _is_our_app("mpv.exe", command):
+            _terminate(pid)
     write_pid()
     return True

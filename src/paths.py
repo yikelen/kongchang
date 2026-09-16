@@ -20,6 +20,21 @@ def settings_path() -> Path:
     return folder / "settings.json"
 
 
+def hold_black_png() -> Path:
+    """1x1 黑 PNG，没有封面图时当黑场用。"""
+    folder = app_root() / "data"
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / "hold_black.png"
+    if not path.exists() or path.stat().st_size < 20:
+        path.write_bytes(
+            bytes.fromhex(
+                "89504E470D0A1A0A0000000D4948445200000001000000010802000000907753DE"
+                "0000000C4944415408D76360000000020001E221BC330000000049454E44AE426082"
+            )
+        )
+    return path
+
+
 def video_input_conf() -> Path:
     path = app_root() / "data" / "mpv-video-input.conf"
     path.parent.mkdir(parents=True, exist_ok=True)

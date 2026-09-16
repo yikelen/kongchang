@@ -212,7 +212,9 @@ QPushButton:pressed { background: @btn_pressed; }
 QPushButton#addBtn { background: @add_btn; }
 QPushButton#navBtn, QPushButton#goBtn, QPushButton#stopBtn,
 QPushButton#pauseBtn, QPushButton#resumeBtn, QPushButton#stageBtn,
-QPushButton#unstageBtn {
+QPushButton#unstageBtn, QPushButton#muteBtn, QPushButton#muteOnBtn,
+QPushButton#holdBtn, QPushButton#holdOnBtn, QPushButton#duckBtn,
+QPushButton#duckOnBtn, QPushButton#panicBtn {
     font-size: 18px;
     font-weight: 700;
     min-width: 108px;
@@ -245,7 +247,10 @@ QPushButton#stopBtn:disabled,
 QPushButton#pauseBtn:disabled,
 QPushButton#resumeBtn:disabled,
 QPushButton#stageBtn:disabled,
-QPushButton#unstageBtn:disabled {
+QPushButton#unstageBtn:disabled,
+QPushButton#muteBtn:disabled,
+QPushButton#holdBtn:disabled,
+QPushButton#duckBtn:disabled {
     background: @disabled_bg;
     color: @disabled_fg;
 }
@@ -266,6 +271,73 @@ QPushButton#unstageBtn {
     background: @unstage;
     color: @stop_fg;
 }
+QPushButton#panicBtn {
+    background: #8a1f1f;
+    color: #fff;
+}
+QPushButton#panicBtn:hover { background: @stop; }
+QLabel#hotkeyBar, QPushButton#showClock {
+    color: @muted;
+    font-size: 12px;
+    font-weight: 600;
+}
+QLabel#nextKicker {
+    color: @muted;
+    font-size: 12px;
+    font-weight: 700;
+}
+QLabel#nextTitle {
+    color: @fg;
+    font-size: 20px;
+    font-weight: 800;
+}
+QLabel#projStatus {
+    color: @now_kicker;
+    font-size: 13px;
+    font-weight: 700;
+}
+QLabel#vuKicker {
+    color: @muted;
+    font-size: 11px;
+    font-weight: 700;
+}
+QLabel#vuLabel {
+    color: @muted;
+    font-size: 11px;
+}
+QProgressBar#vuBar {
+    background: @bg;
+    border: 1px solid @border;
+    min-height: 8px;
+    max-height: 10px;
+}
+QProgressBar#vuBar::chunk { background: @go; }
+QFrame#nextCard {
+    background: @panel;
+    border-left: 4px solid @border;
+}
+QPushButton#muteBtn, QPushButton#holdBtn, QPushButton#duckBtn {
+    min-width: 88px;
+    font-size: 16px;
+}
+QPushButton#muteOnBtn {
+    background: @stop;
+    color: @stop_fg;
+    min-width: 88px;
+    font-size: 16px;
+}
+QPushButton#holdOnBtn {
+    background: @stage;
+    color: @stage_fg;
+    min-width: 88px;
+    font-size: 16px;
+}
+QPushButton#duckOnBtn {
+    background: @resume;
+    color: @resume_fg;
+    min-width: 88px;
+    font-size: 16px;
+}
 /* 临时区操作键：样式同底栏，尺寸更紧凑，文字居中 */
 QPushButton#libGoBtn, QPushButton#libStopBtn, QPushButton#libPauseBtn,
 QPushButton#libResumeBtn, QPushButton#libStageBtn, QPushButton#libUnstageBtn {
@@ -283,6 +355,22 @@ QPushButton#libGoBtn {
 }
 QPushButton#libGoBtn:hover { background: @go_hover; }
 QPushButton#libGoBtn:disabled {
+    background: @disabled_bg;
+    color: @disabled_fg;
+}
+QPushButton#libStopSplitBtn {
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 0;
+    min-height: 28px;
+    max-height: 30px;
+    padding: 0 6px;
+    text-align: center;
+    background: @unstage;
+    color: @stop_fg;
+}
+QPushButton#libStopSplitBtn:hover { background: @stop; }
+QPushButton#libStopSplitBtn:disabled {
     background: @disabled_bg;
     color: @disabled_fg;
 }
@@ -311,6 +399,29 @@ QPushButton#libResumeBtn:disabled, QPushButton#libStageBtn:disabled,
 QPushButton#libUnstageBtn:disabled {
     background: @disabled_bg;
     color: @disabled_fg;
+}
+QWidget#libModeHost {
+    background: transparent;
+}
+QPushButton#libModeBtn {
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 72px;
+    max-width: 92px;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 0 6px;
+    background: @add_btn;
+    color: @lib_cat_fg;
+    border: 1px solid @border;
+    border-radius: 3px;
+}
+QPushButton#libModeBtn:hover { background: @btn_hover; }
+QPushButton#libModeBtn[mode="repeat_one"],
+QPushButton#libModeBtn[mode="sequence"],
+QPushButton#libModeBtn[mode="repeat_all"] {
+    border-color: @go;
+    color: @go;
 }
 QTableWidget {
     background: @table;
@@ -372,9 +483,15 @@ QLabel#nowTitle {
     font-size: 22px;
     font-weight: 700;
 }
+QLabel#nowRemain {
+    color: @now_kicker;
+    font-size: 28px;
+    font-weight: 700;
+    font-family: "Consolas", "Microsoft YaHei UI";
+}
 QLabel#nowNotes {
     color: @now_notes;
-    font-size: 13px;
+    font-size: 16px;
 }
 QFrame#inspector, QFrame#library {
     background: @panel;
@@ -400,12 +517,30 @@ QProgressBar#mediaProgress {
     border: 1px solid @border;
     min-height: 18px;
     max-height: 18px;
+    min-width: 0;
+    padding: 0;
+    margin: 0;
     border-radius: 3px;
-    text-align: center;
+    text-align: left;
 }
 QProgressBar#mediaProgress::chunk {
     background: @progress_chunk;
+    margin: 0;
     border-radius: 2px;
+}
+QLabel#libSeekTag {
+    color: @fg;
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 0;
+    max-width: 36px;
+}
+QLabel#libSeekTime {
+    color: @fg;
+    font-family: "Consolas", "Microsoft YaHei UI";
+    font-size: 13px;
+    font-weight: 700;
+    min-width: 0;
 }
 QLabel#progressTime {
     color: @fg;

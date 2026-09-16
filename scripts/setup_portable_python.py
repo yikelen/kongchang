@@ -64,16 +64,29 @@ def _python_ok() -> bool:
         return False
 
 
+def _extractall(tf: tarfile.TarFile, dest: Path) -> None:
+    # 3.12+ 解压必须声明 filter，否则 3.13 会打 DeprecationWarning，
+    # 看起来像启动失败；这是官方构建包，用 fully_trusted。
+    if sys.version_info >= (3, 12):
+        tf.extractall(dest, filter="fully_trusted")
+    else:
+        tf.extractall(dest)
+
+
 def _extract_python(archive: Path, dest: Path) -> None:
-    dest.mkdir(parents=True, exist_ok=True)
+    dest.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
+        print("正在解压便携 Python（约半分钟）…", flush=True)
         with tarfile.open(archive, "r:gz") as tf:
-            tf.extractall(tmp_path)
-        exe = next(tmp_path.rglob("python.exe"))
-        folder = exe.parent
+            _extractall(tf, tmp_path)
+        found = list(tmp_path.rglob("python.exe"))
+        if not found:
+            raise SystemExit(f"压缩包里没有 python.exe：{archive}")
+        folder = found[0].parent
         if dest.exists():
-            shutil.rmtree(dest)
+            shutil.rmtree(dest, ignore_errors=True)
+        print("正在放到", dest, flush=True)
         shutil.move(str(folder), str(dest))
 
 
