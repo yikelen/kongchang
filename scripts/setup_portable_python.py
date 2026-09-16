@@ -29,8 +29,27 @@ URL = (
 _UA = {"User-Agent": "kongchang-portable-python"}
 
 
+def _stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):
+            pass
+
+
+def _say(*parts: object) -> None:
+    text = " ".join(str(p) for p in parts)
+    try:
+        print(text, flush=True)
+    except UnicodeEncodeError:
+        print(text.encode("ascii", "backslashreplace").decode("ascii"), flush=True)
+
+
 def _download(url: str, dest: Path) -> None:
-    print("下载", url)
+    _say("download", url)
     req = urllib.request.Request(url, headers=_UA)
     with urllib.request.urlopen(req, timeout=120) as resp, dest.open("wb") as out:
         total = resp.headers.get("Content-Length")
@@ -43,10 +62,14 @@ def _download(url: str, dest: Path) -> None:
             out.write(chunk)
             got += len(chunk)
             if total_n:
-                print(f"\r  {got / 1e6:.1f} / {total_n / 1e6:.1f} MB", end="", flush=True)
+                msg = f"  {got / 1e6:.1f} / {total_n / 1e6:.1f} MB"
             else:
-                print(f"\r  {got / 1e6:.1f} MB", end="", flush=True)
-        print()
+                msg = f"  {got / 1e6:.1f} MB"
+            try:
+                print(f"\r{msg}", end="", flush=True)
+            except UnicodeEncodeError:
+                pass
+        _say()
 
 
 def _python_ok() -> bool:
@@ -77,7 +100,7 @@ def _extract_python(archive: Path, dest: Path) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
-        print("正在解压便携 Python（约半分钟）…", flush=True)
+        _say("extracting portable Python ...")
         with tarfile.open(archive, "r:gz") as tf:
             _extractall(tf, tmp_path)
         found = list(tmp_path.rglob("python.exe"))
@@ -86,27 +109,27 @@ def _extract_python(archive: Path, dest: Path) -> None:
         folder = found[0].parent
         if dest.exists():
             shutil.rmtree(dest, ignore_errors=True)
-        print("正在放到", dest, flush=True)
+        _say("moving into", dest)
         shutil.move(str(folder), str(dest))
 
 
 def main() -> None:
     if _python_ok():
-        print("已有可用的 vendor/python，跳过。")
+        _say("vendor/python already ok, skip")
         return
 
     DEST.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         archive = Path(tmp) / ASSET
         _download(URL, archive)
-        print("解压到", DEST, flush=True)
+        _say("extract to", DEST)
         _extract_python(archive, DEST)
 
     py = DEST / "python.exe"
     if not py.exists():
         raise SystemExit(f"解压后没有 {py}")
 
-    print("安装 pip 依赖 …", flush=True)
+    _say("pip install dependencies ...")
     subprocess.check_call([str(py), "-m", "pip", "install", "-U", "pip"])
     subprocess.check_call([str(py), "-m", "pip", "install", "-r", str(REQ)])
 
@@ -116,10 +139,11 @@ def main() -> None:
     )
     if not _python_ok():
         raise SystemExit("安装完成但无法 import PySide6")
-    print("完成。之后双击 启动.bat 即可，整夹拷到别的电脑也能用。")
+    _say("done. run 启动.bat next time.")
 
 
 if __name__ == "__main__":
+    _stdio()
     if sys.version_info < (3, 11):
-        raise SystemExit("引导本脚本需要 Python 3.11+（只在打包时用，运行软件不需要）")
+        raise SystemExit("need Python 3.11+ to bootstrap (runtime uses vendor/python)")
     main()
