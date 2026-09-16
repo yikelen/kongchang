@@ -34,10 +34,10 @@ PROJECT_README = (
     "type 用 audio / video / note，也可用 音频 / 视频 / 备注。"
     "path 相对本 json 所在目录（如 audio/warmup.mp3），备注条 path 留空。"
     "音频不写 loop 时默认循环。"
-    "library 是临时音视频库，不进节目单顺序；"
+    "library 是素材库，不进节目单顺序；"
     "节目单里的音视频会自动镜像到 library（source_id 指向原条目，分类为「默认」，放在列表最底、顺序同节目单），"
     "方便拿节目单垫乐去叠无声视频。"
-    "category 可选，临时媒体按分类分组显示（如 颁奖/茶歇/过场）。"
+    "category 可选，素材库按分类分组显示（如 颁奖/茶歇/过场）。"
     "library_play_modes 按分类记录播放模式：default 默认（选中谁播谁，跟条目 loop），"
     "repeat_one 单曲循环，sequence 顺序播放（同类播完即停），repeat_all 列表循环。"
     "hold_cover 可选，相对本 json 的封面图；视频播完（不循环）后投这张图，避免停在最后一帧。"
@@ -305,7 +305,7 @@ class Project:
         return saved
 
     def mirror_show_cue(self, cue: Cue) -> Cue | None:
-        """把节目单音视频镜像到临时列表「默认」分类，顺序与节目单一致。"""
+        """把节目单音视频镜像到素材库「默认」分类，顺序与节目单一致。"""
         if cue.type not in ("audio", "video"):
             return None
         for item in self.library:
