@@ -5,7 +5,7 @@
 仓库：https://github.com/yikelen/kongchang  
 平台：**仅 Windows 64 位**（Win10/11）。macOS / Linux 不适用。
 
-当前版本号在 `src/__init__.py`（例如 `0.2.3`）。GitHub 便携包文件名带对应 git 标签，例如 `kongchang-windows-portable-v0.2.3.zip`。**不要写死旧版本号去下载 zip。**
+当前版本号在 `src/__init__.py`（例如 `0.2.4`）。GitHub 便携包文件名带对应 git 标签，例如 `kongchang-windows-portable-v0.2.4.zip`。**不要写死旧版本号去下载 zip。**
 
 界面用语：**右侧叫「素材库」**，不要再叫「临时列表 / 临时媒体」。
 

@@ -45,7 +45,7 @@
 
 适合：**年会 / 晚会**、**培训 / 宣讲**、**启动会 / 动员会** 等「一块屏翻课件、另一块屏出片」的现场。
 
-仅 **Windows 10/11 x64**。当前源码版本见 `src/__init__.py`（与 GitHub Release 标签一致，例如 `v0.2.3`）。
+仅 **Windows 10/11 x64**。当前源码版本见 `src/__init__.py`（与 GitHub Release 标签一致，例如 `v0.2.4`）。
 
 ---
 
@@ -296,7 +296,7 @@
 2. 下载 `kongchang-windows-portable-*.zip` 并解压到本地盘（如 `D:\kongchang`）
 3. 双击 **`启动.bat`**
 
-推送标签 `v*`（例如 `v0.2.3`）时，GitHub Actions 会自动打这份 zip 并挂到对应 Release。文件名带标签，例如 `kongchang-windows-portable-v0.2.3.zip`。请到 Release 页下最新那个，不要写死旧版本号。
+推送标签 `v*`（例如 `v0.2.4`）时，GitHub Actions 会自动打这份 zip 并挂到对应 Release。文件名带标签，例如 `kongchang-windows-portable-v0.2.4.zip`。请到 Release 页下最新那个，不要写死旧版本号。
 
 若提示 Qt / DLL 错误，先安装 [VC++ 2015–2022 x64](https://aka.ms/vs/17/release/vc_redist.x64.exe) 再开。更细的打不开说明见仓库里的 `打不开请先看.txt`。
 
