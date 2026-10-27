@@ -28,12 +28,15 @@ class PortableArchiveTests(unittest.TestCase):
                 for name in REQUIRED_FILES:
                     zf.writestr(name, "fixture")
             self.assertEqual(check_archive(archive), [])
-            omitted = "kongchang/skills/kongchang-control/scripts/agent_ctl.py"
-            with zipfile.ZipFile(archive, "w") as zf:
-                for name in REQUIRED_FILES:
-                    if name != omitted:
-                        zf.writestr(name, "fixture")
-            self.assertEqual(check_archive(archive), [omitted])
+            for omitted in ("kongchang/简易控场.exe",
+                            "kongchang/skills/kongchang-control/scripts/agent_ctl.py",
+                            "kongchang/vendor/python/Lib/site-packages/PySide6/plugins/platforms/qwindows.dll"):
+                with self.subTest(omitted=omitted):
+                    with zipfile.ZipFile(archive, "w") as zf:
+                        for name in REQUIRED_FILES:
+                            if name != omitted:
+                                zf.writestr(name, "fixture")
+                    self.assertEqual(check_archive(archive), [omitted])
 
 
 if __name__ == "__main__":

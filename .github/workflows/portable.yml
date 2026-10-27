@@ -35,6 +35,8 @@ jobs:
           mkdir pack 2>nul
           robocopy . pack\kongchang /E /NFL /NDL /NJH /NJS /XD .git pack .github __pycache__ .venv "%CD%\dist" "%CD%\data" /XF *.pyc *.pid *.lnk splash.close
           if errorlevel 8 exit /b 1
+          pwsh -NoProfile -File scripts\build_launcher.ps1 -OutputDirectory pack\kongchang
+          if errorlevel 1 exit /b 1
           python -u scripts/create_portable_archive.py pack\kongchang %NAME%.zip
           if errorlevel 1 exit /b 1
           if not exist %NAME%.zip exit /b 1

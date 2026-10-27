@@ -2141,6 +2141,8 @@ class MainWindow(QMainWindow):
         )
 
     def _maybe_create_desktop_shortcut(self) -> None:
+        if os.environ.get("KONGCHANG_PORTABLE") == "1":
+            return
         if getattr(self.settings, "desktop_shortcut_created", False):
             return
         from src.shortcut import create_shortcuts

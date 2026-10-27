@@ -128,6 +128,8 @@ Test-Path .\vendor\mpv\mpv.exe
 
 ## 3. 启动软件
 
+绿色便携包解压后可直接双击根目录的 `简易控场.exe`；此入口不会自动创建桌面快捷方式。请保留完整文件夹。
+
 ```powershell
 Start-Process -FilePath ".\启动.bat" -WorkingDirectory (Get-Location)
 ```

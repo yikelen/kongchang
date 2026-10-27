@@ -1,4 +1,4 @@
-"""Check that a portable ZIP includes the app, Agent Skill and installer."""
+"""Check that a portable ZIP includes the app, Agent Skill and runtime."""
 from __future__ import annotations
 
 import argparse
@@ -8,6 +8,7 @@ from pathlib import Path
 
 
 REQUIRED_FILES = (
+    "kongchang/简易控场.exe",
     "kongchang/启动.bat",
     "kongchang/安装Agent技能.bat",
     "kongchang/src/main.py",
@@ -18,6 +19,9 @@ REQUIRED_FILES = (
     "kongchang/skills/kongchang-control/scripts/agent_ctl.py",
     "kongchang/skills/kongchang-control/references/api.md",
     "kongchang/vendor/python/pythonw.exe",
+    "kongchang/vendor/python/python.exe",
+    "kongchang/vendor/python/Lib/site-packages/PySide6/QtWidgets.pyd",
+    "kongchang/vendor/python/Lib/site-packages/PySide6/plugins/platforms/qwindows.dll",
     "kongchang/vendor/mpv/mpv.exe",
 )
 
@@ -40,7 +44,7 @@ def main() -> int:
     if missing:
         print("便携包缺少必需文件：\n" + "\n".join(missing), file=sys.stderr)
         return 1
-    print("便携包包含程序、Agent Skill、CLI 和安装工具。")
+    print("便携包包含程序 EXE、Agent Skill、CLI 和运行环境。")
     return 0
 
 

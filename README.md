@@ -70,6 +70,10 @@
 
 如果移动软件目录，重新安装 Skill 或通过 CLI 的 `--app-dir` 指定新目录；也可设置 `KONGCHANG_HOME`。完整调用方式见 [Skill 说明](skills/kongchang-control/SKILL.md) 和 [Agent 控制接口](docs/agent-control.md)。
 
+### 绿色便携版
+
+将便携 ZIP 解压到可写目录后，双击文件夹内的 `简易控场.exe` 即可启动，无需安装，也不会自动创建桌面快捷方式。请保留整个文件夹：播放器、运行环境、Skill 和 CLI 都随软件一起提供，设置保存在该文件夹的 `data` 中。如需让 Codex 自动发现 Skill，可另行双击 `安装Agent技能.bat`；不安装 Skill 也能正常使用软件。
+
 ## 界面说明
 
 当前主界面（深色主题；不另做分区圈注，避免标错）：
