@@ -7,9 +7,20 @@ import zipfile
 from pathlib import Path
 
 from scripts.check_portable_archive import REQUIRED_FILES, check_archive
+from scripts.create_portable_archive import create_archive
 
 
 class PortableArchiveTests(unittest.TestCase):
+    def test_created_archive_preserves_chinese_filename(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "kongchang"
+            source.mkdir()
+            (source / "启动.bat").write_text("test", encoding="utf-8")
+            archive = Path(temp) / "portable.zip"
+            create_archive(source, archive)
+            with zipfile.ZipFile(archive) as zf:
+                self.assertEqual(zf.read("kongchang/启动.bat"), b"test")
+
     def test_complete_archive_passes_and_missing_skill_is_reported(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             archive = Path(temp) / "portable.zip"

@@ -33,9 +33,10 @@ jobs:
           set NAME=kongchang-windows-portable-${{ github.ref_name }}
           if "%NAME%"=="kongchang-windows-portable-" set NAME=kongchang-windows-portable-dev
           mkdir pack 2>nul
-          robocopy . pack\kongchang /E /NFL /NDL /NJH /NJS /XD .git pack .github __pycache__ .venv /XF *.pyc *.pid splash.close
+          robocopy . pack\kongchang /E /NFL /NDL /NJH /NJS /XD .git pack .github __pycache__ .venv "%CD%\dist" "%CD%\data" /XF *.pyc *.pid *.lnk splash.close
           if errorlevel 8 exit /b 1
-          tar.exe -a -c -f %NAME%.zip -C pack kongchang
+          python -u scripts/create_portable_archive.py pack\kongchang %NAME%.zip
+          if errorlevel 1 exit /b 1
           if not exist %NAME%.zip exit /b 1
           python -u scripts/check_portable_archive.py %NAME%.zip
           if errorlevel 1 exit /b 1
