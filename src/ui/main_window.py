@@ -5,8 +5,8 @@ import os
 import subprocess
 from pathlib import Path
 
-from PySide6.QtCore import QByteArray, QRect, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QFont, QGuiApplication, QKeyEvent, QMouseEvent, QPainter, QPalette, QPen
+from PySide6.QtCore import QByteArray, QPointF, QRect, QRectF, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QColor, QFont, QGuiApplication, QKeyEvent, QMouseEvent, QPainter, QPalette, QPen, QPixmap, QPolygonF, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -25,10 +25,13 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSlider,
+    QScrollArea,
     QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTableWidget,
+    QTabWidget,
+    QStackedLayout,
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
@@ -71,6 +74,59 @@ _MODE_BTN_TEXT = {
 # 临时音频列表里的分类标题行（非媒体）
 LIB_HEADER = "__lib_category_header__"
 LIB_UNCATEGORIZED = "未分类"
+
+
+def player_icon(kind: str, color: str, disabled_color: str | None = None) -> QIcon:
+    """Draw the transport symbols in a consistent, resolution-independent style."""
+    icon = QIcon()
+    for mode, opacity in ((QIcon.Mode.Normal, 1.0), (QIcon.Mode.Disabled, 0.35)):
+        pixmap = QPixmap(48, 48)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setOpacity(opacity)
+        ink = QColor(disabled_color if mode == QIcon.Mode.Disabled and disabled_color else color)
+        painter.setBrush(ink)
+        painter.setPen(Qt.PenStyle.NoPen)
+        if kind in ("previous", "next"):
+            if kind == "previous":
+                painter.drawRoundedRect(QRectF(10, 13, 4, 22), 1, 1)
+                points = [(34, 13), (17, 24), (34, 35)]
+            else:
+                painter.drawRoundedRect(QRectF(34, 13, 4, 22), 1, 1)
+                points = [(14, 13), (31, 24), (14, 35)]
+            painter.drawPolygon(QPolygonF([QPointF(x, y) for x, y in points]))
+        elif kind == "play":
+            painter.drawPolygon(QPolygonF([QPointF(17, 11), QPointF(37, 24), QPointF(17, 37)]))
+        elif kind == "pause":
+            painter.drawRoundedRect(QRectF(14, 12, 7, 24), 2, 2)
+            painter.drawRoundedRect(QRectF(27, 12, 7, 24), 2, 2)
+        elif kind == "stop":
+            painter.drawRoundedRect(QRectF(14, 14, 20, 20), 3, 3)
+        elif kind in ("fullscreen", "exit_fullscreen"):
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(QPen(ink, 3, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+            if kind == "fullscreen":
+                segments = ((18, 10, 10, 10, 10, 18), (30, 10, 38, 10, 38, 18),
+                            (10, 30, 10, 38, 18, 38), (38, 30, 38, 38, 30, 38))
+            else:
+                segments = ((10, 18, 18, 18, 18, 10), (38, 18, 30, 18, 30, 10),
+                            (18, 38, 18, 30, 10, 30), (30, 38, 30, 30, 38, 30))
+            for x1, y1, x2, y2, x3, y3 in segments:
+                painter.drawPolyline(QPolygonF([QPointF(x1, y1), QPointF(x2, y2), QPointF(x3, y3)]))
+        elif kind == "music":
+            painter.setPen(QPen(ink, 3, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawLine(21, 31, 21, 13)
+            painter.drawLine(21, 13, 34, 10)
+            painter.drawLine(34, 10, 34, 27)
+            painter.setBrush(ink)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(QRectF(12, 28, 10, 7))
+            painter.drawEllipse(QRectF(25, 24, 10, 7))
+        painter.end()
+        icon.addPixmap(pixmap, mode)
+    return icon
 
 
 class CueTable(QTableWidget):
@@ -398,23 +454,31 @@ class SeekBar(QProgressBar):
         self._dragging = False
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setToolTip("拖动或点击跳转进度")
+        self.setFixedHeight(20)
 
     def paintEvent(self, event) -> None:
-        super().paintEvent(event)
-        if self.mark_in <= 0 and self.mark_out <= 0:
-            return
+        window = self.window()
+        colors = window.theme if isinstance(window, MainWindow) else theme_colors("dark")
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
-        w = max(1, self.width())
-        h = self.height()
-        if self.mark_in > 0:
-            painter.setPen(QPen(QColor("#f0b429"), 2))
-            x = max(1, min(w - 2, int(self.mark_in * w)))
-            painter.drawLine(x, 1, x, h - 2)
-        if self.mark_out > 0:
-            painter.setPen(QPen(QColor("#ef5555"), 2))
-            x = max(1, min(w - 2, int(self.mark_out * w)))
-            painter.drawLine(x, 1, x, h - 2)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        left, width = 6.0, max(1.0, self.width() - 12.0)
+        y = (self.height() - 4.0) / 2.0
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(colors["border"]))
+        painter.drawRoundedRect(QRectF(left, y, width, 4), 2, 2)
+        span = self.maximum() - self.minimum()
+        ratio = max(0.0, min(1.0, (self.value() - self.minimum()) / span)) if span else 0.0
+        if ratio > 0:
+            painter.setBrush(QColor(colors["progress_chunk"]))
+            painter.drawRoundedRect(QRectF(left, y, width * ratio, 4), 2, 2)
+        if self.isEnabled():
+            painter.setBrush(QColor(colors["slider_handle"]))
+            painter.drawEllipse(QPointF(left + width * ratio, self.height() / 2), 4, 4)
+        for mark, color in ((self.mark_in, "#f0b429"), (self.mark_out, "#ef5555")):
+            if mark > 0:
+                x = left + min(1.0, mark) * width
+                painter.setPen(QPen(QColor(color), 2))
+                painter.drawLine(QPointF(x, y - 3), QPointF(x, y + 7))
         painter.end()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
@@ -441,9 +505,9 @@ class SeekBar(QProgressBar):
         super().mouseReleaseEvent(event)
 
     def _emit_ratio(self, event: QMouseEvent) -> None:
-        width = max(1, self.width())
+        width = max(1, self.width() - 12)
         x = event.position().x() if hasattr(event, "position") else event.x()
-        self.seeked.emit(max(0.0, min(1.0, float(x) / width)))
+        self.seeked.emit(max(0.0, min(1.0, (float(x) - 6) / width)))
 
 
 class VolumeSlider(QSlider):
@@ -525,6 +589,10 @@ class MainWindow(QMainWindow):
         root = QWidget()
         root.setObjectName("root")
         self.setCentralWidget(root)
+        # Emergency stop must remain available while an editor or search box has focus.
+        self.panic_shortcut = QShortcut(QKeySequence("Ctrl+Esc"), self)
+        self.panic_shortcut.setContext(Qt.ShortcutContext.WindowShortcut)
+        self.panic_shortcut.activated.connect(self.on_panic)
 
         self._build_menu()
         app = QGuiApplication.instance()
@@ -537,21 +605,48 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(root)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(self._build_add_bar())
-
+        workspace = QWidget()
+        workspace.setObjectName("workspace")
+        workspace_layout = QVBoxLayout(workspace)
+        workspace_layout.setContentsMargins(12, 10, 12, 8)
+        workspace_layout.setSpacing(0)
         split = QSplitter(Qt.Orientation.Horizontal)
+        split.setHandleWidth(10)
+        split.setChildrenCollapsible(False)
         self.main_split = split
-        split.addWidget(self._build_table())
+        split.addWidget(self._build_cue_panel())
+        self.side_tabs = QTabWidget()
+        self.side_tabs.setObjectName("sideTabs")
+        self.side_tabs.addTab(self._build_library(), "素材库")
         self.inspector_panel = self._build_inspector()
-        split.addWidget(self.inspector_panel)
-        split.addWidget(self._build_library())
-        split.setStretchFactor(0, 6)
-        split.setStretchFactor(1, 3)
-        split.setStretchFactor(2, 2)
+        inspector_scroll = QScrollArea()
+        inspector_scroll.setObjectName("inspectorScroll")
+        inspector_scroll.setWidgetResizable(True)
+        inspector_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        inspector_scroll.setWidget(self.inspector_panel)
+        self.side_tabs.addTab(inspector_scroll, "编辑选中")
+        side = QFrame()
+        side.setObjectName("sidePanel")
+        side_layout = QVBoxLayout(side)
+        side_layout.setContentsMargins(4, 2, 4, 4)
+        side_layout.setSpacing(0)
+        side_layout.addWidget(self.side_tabs, 1)
+        side_layout.addWidget(self.library_bed)
+        split.addWidget(side)
+        split.setStretchFactor(0, 7)
+        split.setStretchFactor(1, 4)
+        split.setSizes([760, 420])
         split.splitterMoved.connect(lambda *_: self._layout_timer.start())
-        layout.addWidget(split, 1)
-        layout.addWidget(self._build_now_next())
-        layout.addWidget(self._build_transport())
+        workspace_layout.addWidget(split)
+        layout.addWidget(workspace, 1)
+        footer = QWidget()
+        footer.setObjectName("footerWrap")
+        footer_layout = QVBoxLayout(footer)
+        footer_layout.setContentsMargins(12, 0, 12, 12)
+        footer_layout.setSpacing(6)
+        footer_layout.addWidget(self._build_now_next())
+        footer_layout.addWidget(self._build_transport())
+        layout.addWidget(footer)
         self.status_label = QLabel()
         self.status_label.setObjectName("status")
         self.status_label.setVisible(False)
@@ -628,9 +723,6 @@ class MainWindow(QMainWindow):
             else:
                 self._apply_volume(self.controller.nudge_volume(-5))
             return
-        if event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_Escape:
-            self.on_panic()
-            return
         if event.key() == Qt.Key.Key_F11:
             self._toggle_show_mode()
             return
@@ -677,7 +769,8 @@ class MainWindow(QMainWindow):
         if hasattr(self, "now_title"):
             self._update_now_next(None)
         if hasattr(self, "go_btn"):
-            self._refresh_transport_labels(self.active_cue())
+            self._update_transport_icons()
+            self._refresh_transport_labels(self.current_cue())
         self.style().unpolish(self)
         self.style().polish(self)
         self.update()
@@ -883,7 +976,7 @@ class MainWindow(QMainWindow):
     def _build_add_bar(self) -> QWidget:
         bar = QWidget()
         row = QHBoxLayout(bar)
-        row.setContentsMargins(10, 8, 10, 8)
+        row.setContentsMargins(0, 2, 0, 2)
         self._cue_edit_btns: list[QPushButton] = []
         for text, handler in (
             ("+ 音频", lambda: self.add_media("audio")),
@@ -910,14 +1003,14 @@ class MainWindow(QMainWindow):
         bar = QFrame()
         bar.setObjectName("nowNext")
         row = QHBoxLayout(bar)
-        row.setContentsMargins(10, 8, 10, 8)
-        row.setSpacing(10)
+        row.setContentsMargins(12, 8, 12, 8)
+        row.setSpacing(8)
 
         now = QFrame()
         now.setObjectName("nowCard")
         self.now_card = now
         now_box = QVBoxLayout(now)
-        now_box.setContentsMargins(12, 8, 12, 8)
+        now_box.setContentsMargins(10, 4, 10, 4)
         now_box.setSpacing(2)
         self.now_kicker = QLabel("选中")
         self.now_kicker.setObjectName("nowKicker")
@@ -927,7 +1020,7 @@ class MainWindow(QMainWindow):
         self.now_notes = QLabel("")
         self.now_notes.setObjectName("nowNotes")
         self.now_notes.setWordWrap(True)
-        self.now_notes.setMinimumHeight(44)
+        self.now_notes.setMinimumHeight(0)
         self.now_notes.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.now_remain = QLabel("")
         self.now_remain.setObjectName("nowRemain")
@@ -940,7 +1033,7 @@ class MainWindow(QMainWindow):
         nxt.setObjectName("nextCard")
         self.next_card = nxt
         nxt_box = QVBoxLayout(nxt)
-        nxt_box.setContentsMargins(12, 8, 12, 8)
+        nxt_box.setContentsMargins(10, 4, 10, 4)
         nxt_box.setSpacing(2)
         self.next_kicker = QLabel("下一条")
         self.next_kicker.setObjectName("nextKicker")
@@ -954,8 +1047,6 @@ class MainWindow(QMainWindow):
         nxt_box.addWidget(self.next_title)
         nxt_box.addWidget(self.next_notes)
 
-        side = QVBoxLayout()
-        side.setSpacing(4)
         self.show_clock = QPushButton("未开演")
         self.show_clock.setObjectName("showClock")
         self.show_clock.setFlat(True)
@@ -964,42 +1055,76 @@ class MainWindow(QMainWindow):
         self.show_clock.clicked.connect(self._reset_show_clock)
         self.proj_status = QLabel("无画面")
         self.proj_status.setObjectName("projStatus")
-        self.proj_status.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.proj_status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        clock_column = QVBoxLayout()
+        clock_column.setSpacing(2)
+        clock_column.addWidget(self.show_clock)
+        clock_column.addWidget(self.proj_status)
         self.show_vu = QProgressBar()
         self.show_vu.setObjectName("vuBar")
         self.show_vu.setRange(0, 100)
         self.show_vu.setValue(0)
         self.show_vu.setTextVisible(False)
-        self.show_vu.setFixedWidth(88)
-        self.show_vu.setFixedHeight(10)
+        self.show_vu.setFixedSize(72, 8)
         self.show_vu.setToolTip("节目单有声时的音量示意，不是精确分贝")
         self.lib_vu = QProgressBar()
         self.lib_vu.setObjectName("vuBar")
         self.lib_vu.setRange(0, 100)
         self.lib_vu.setValue(0)
         self.lib_vu.setTextVisible(False)
-        self.lib_vu.setFixedWidth(88)
-        self.lib_vu.setFixedHeight(10)
+        self.lib_vu.setFixedSize(72, 8)
         self.lib_vu.setToolTip("素材库有声时的音量示意，不是精确分贝")
-        vu_kicker = QLabel("电平")
-        vu_kicker.setObjectName("vuKicker")
-        show_vu_lab = QLabel("节目单")
-        show_vu_lab.setObjectName("vuLabel")
-        lib_vu_lab = QLabel("素材库")
-        lib_vu_lab.setObjectName("vuLabel")
-        side.addWidget(self.show_clock)
-        side.addWidget(self.proj_status)
-        side.addStretch(1)
-        side.addWidget(vu_kicker)
-        side.addWidget(show_vu_lab)
-        side.addWidget(self.show_vu)
-        side.addWidget(lib_vu_lab)
-        side.addWidget(self.lib_vu)
+        vu_column = QVBoxLayout()
+        vu_column.setSpacing(2)
+        for label, meter in (("节目单", self.show_vu), ("素材库", self.lib_vu)):
+            meter_row = QHBoxLayout()
+            meter_row.setSpacing(5)
+            meter_label = QLabel(label)
+            meter_label.setObjectName("vuLabel")
+            meter_row.addWidget(meter_label)
+            meter_row.addWidget(meter)
+            vu_column.addLayout(meter_row)
+        side = QHBoxLayout()
+        side.setSpacing(10)
+        side.addLayout(clock_column)
+        side.addLayout(vu_column)
 
         row.addWidget(now, 3)
         row.addWidget(nxt, 2)
         row.addLayout(side, 0)
         return bar
+
+    def _build_cue_panel(self) -> QWidget:
+        panel = QFrame()
+        panel.setObjectName("cuePanel")
+        box = QVBoxLayout(panel)
+        box.setContentsMargins(28, 22, 28, 16)
+        box.setSpacing(10)
+        header = QHBoxLayout()
+        title = QLabel("节目单")
+        title.setObjectName("pageTitle")
+        header.addWidget(title)
+        header.addStretch(1)
+        self.cue_count = QLabel("0 条节目")
+        self.cue_count.setObjectName("countBadge")
+        header.addWidget(self.cue_count)
+        box.addLayout(header)
+        subtitle = QLabel("按演出顺序安排音频、视频与现场备注")
+        subtitle.setObjectName("pageSubtitle")
+        box.addWidget(subtitle)
+        box.addWidget(self._build_add_bar())
+        container = QWidget()
+        layers = QStackedLayout(container)
+        layers.setContentsMargins(0, 0, 0, 0)
+        layers.setStackingMode(QStackedLayout.StackingMode.StackAll)
+        layers.addWidget(self._build_table())
+        self.cue_empty = QLabel("节目单还是空的\n添加音频、视频或备注，开始安排流程")
+        self.cue_empty.setObjectName("emptyState")
+        self.cue_empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.cue_empty.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        layers.addWidget(self.cue_empty)
+        box.addWidget(container, 1)
+        return panel
 
     def _build_table(self) -> QTableWidget:
         self.table = CueTable()
@@ -1069,7 +1194,8 @@ class MainWindow(QMainWindow):
         cat_row.addWidget(self.category_add_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         self.notes_edit = QPlainTextEdit()
         self.notes_edit.setPlaceholderText("备注 / 现场口令")
-        self.notes_edit.setFixedHeight(150)
+        self.notes_edit.setMinimumHeight(90)
+        self.notes_edit.setMaximumHeight(150)
         self.path_edit = QLineEdit()
         self.path_edit.setReadOnly(True)
         browse = QPushButton("浏览媒体…")
@@ -1164,8 +1290,8 @@ class MainWindow(QMainWindow):
         box = QVBoxLayout(panel)
         box.setContentsMargins(10, 10, 10, 10)
         box.setSpacing(8)
-        title = QLabel("素材库")
-        title.setObjectName("secTitle")
+        title = QLabel("随时点播音频和视频")
+        title.setObjectName("pageSubtitle")
         box.addWidget(title)
         self.library_search = QLineEdit()
         self.library_search.setPlaceholderText("搜索名称 / 备注 / 分类")
@@ -1191,8 +1317,8 @@ class MainWindow(QMainWindow):
         bed = QFrame()
         bed.setObjectName("libraryBed")
         bed_col = QVBoxLayout(bed)
-        bed_col.setContentsMargins(0, 4, 0, 0)
-        bed_col.setSpacing(4)
+        bed_col.setContentsMargins(16, 10, 16, 12)
+        bed_col.setSpacing(6)
         self.library_audio_now = QLabel("素材库：未播放")
         self.library_audio_now.setObjectName("hint")
         self.library_audio_now.setWordWrap(True)
@@ -1245,28 +1371,29 @@ class MainWindow(QMainWindow):
         seek_pair.addLayout(seek_stack, 1)
         seek_pair.addWidget(self.library_vol_row, 0)
         bed_col.addLayout(seek_pair)
-        # 与底栏一致：播放 → 停止 → 暂停 → 全屏 → 收起全屏
         bed_btns = QHBoxLayout()
         bed_btns.setSpacing(6)
-        self.library_audio_play = QPushButton("播放")
+        bed_btns.addStretch(1)
+        self.library_audio_play = QPushButton()
         self.library_audio_play.setObjectName("libGoBtn")
-        self.library_audio_stop = QPushButton("停止")
+        self.library_audio_stop = QPushButton()
         self.library_audio_stop.setObjectName("libStopBtn")
-        self.library_audio_pause = QPushButton("暂停")
+        self.library_audio_pause = QPushButton()
         self.library_audio_pause.setObjectName("libPauseBtn")
-        self.library_stage_btn = QPushButton("全屏")
+        self.library_stage_btn = QPushButton()
         self.library_stage_btn.setObjectName("libStageBtn")
-        self.library_unstage_btn = QPushButton("收起全屏")
+        self.library_unstage_btn = QPushButton()
         self.library_unstage_btn.setObjectName("libUnstageBtn")
-        for btn in (
-            self.library_audio_play,
-            self.library_audio_stop,
-            self.library_audio_pause,
-            self.library_stage_btn,
-            self.library_unstage_btn,
+        for button, label in (
+            (self.library_audio_stop, "停止"), (self.library_audio_pause, "暂停"),
+            (self.library_audio_play, "播放"), (self.library_stage_btn, "全屏"),
+            (self.library_unstage_btn, "收起全屏"),
         ):
-            btn.setFixedHeight(36)
-            bed_btns.addWidget(btn, 1)
+            button.setIconSize(QSize(22, 22))
+            button.setToolTip(label)
+            button.setAccessibleName(label)
+            bed_btns.addWidget(button)
+        bed_btns.addStretch(1)
         self.library_audio_play.clicked.connect(self.on_library_play)
         self.library_audio_stop.clicked.connect(self.on_library_stop)
         self.library_audio_pause.clicked.connect(self.on_library_pause)
@@ -1288,11 +1415,7 @@ class MainWindow(QMainWindow):
         split_row.addWidget(self.library_stop_bed_btn, 1)
         split_row.addWidget(self.library_stop_video_btn, 1)
         bed_col.addLayout(split_row)
-        box.addWidget(bed)
-        hint = QLabel("点另一条视频即切播。素材库音频与节目单音频互斥；可叠在无声视频上。分类：默认 / 单曲 / 顺序 / 列表。")
-        hint.setObjectName("hint")
-        hint.setWordWrap(True)
-        box.addWidget(hint)
+        self.library_bed = bed
         return panel
 
     def _make_lib_seek_row(self, tag: str) -> tuple[SeekBar, QLabel, QHBoxLayout]:
@@ -1307,7 +1430,7 @@ class MainWindow(QMainWindow):
         bar.setValue(0)
         bar.setTextVisible(False)
         bar.setEnabled(False)
-        bar.setFixedHeight(14)
+        bar.setFixedHeight(20)
         bar.setToolTip(f"拖动{tag}进度")
         clock = QLabel("--:-- / --:--")
         clock.setObjectName("libSeekTime")
@@ -1322,10 +1445,10 @@ class MainWindow(QMainWindow):
         bar = QFrame()
         bar.setObjectName("transport")
         box = QVBoxLayout(bar)
-        box.setContentsMargins(12, 10, 12, 12)
-        box.setSpacing(8)
-        prog = QHBoxLayout()
-        prog.setSpacing(12)
+        box.setContentsMargins(18, 8, 18, 10)
+        box.setSpacing(5)
+        progress = QHBoxLayout()
+        progress.setSpacing(8)
         self.progress_bar = SeekBar()
         self.progress_bar.setObjectName("mediaProgress")
         self.progress_bar.setRange(0, 1000)
@@ -1335,39 +1458,35 @@ class MainWindow(QMainWindow):
         self.progress_bar.seeked.connect(self._on_seek)
         self.progress_time = QLabel("--:-- / --:--")
         self.progress_time.setObjectName("progressTime")
-        self.volume_label = QLabel("音量 100")
-        self.volume_label.setObjectName("volumeLabel")
-        self.volume_slider = VolumeSlider(Qt.Orientation.Horizontal)
-        self.volume_slider.setObjectName("volumeSlider")
-        self.volume_slider.setRange(0, 100)
-        self.volume_slider.blockSignals(True)
-        self.volume_slider.setValue(int(self.controller.output_volume))
-        self.volume_slider.blockSignals(False)
-        self.volume_slider.setMinimumWidth(120)
-        self.volume_slider.setMaximumWidth(180)
-        self.volume_slider.setToolTip("输出音量，本机记住")
-        self.volume_slider.valueChanged.connect(self._on_volume_changed)
-        prog.addWidget(self.progress_bar, 1)
-        prog.addWidget(self.progress_time)
-        prog.addWidget(self.volume_label)
-        prog.addWidget(self.volume_slider)
-        box.addLayout(prog)
+        progress.addWidget(self.progress_bar, 1)
+        progress.addWidget(self.progress_time)
+        box.addLayout(progress)
+
         row = QHBoxLayout()
-        row.setSpacing(10)
-        self.prev_btn = QPushButton("上一条")
+        row.setSpacing(6)
+        self.prev_btn = QPushButton()
         self.prev_btn.setObjectName("navBtn")
-        self.next_btn = QPushButton("下一条")
+        self.next_btn = QPushButton()
         self.next_btn.setObjectName("navBtn")
-        self.go_btn = QPushButton("播放")
+        self.go_btn = QPushButton()
         self.go_btn.setObjectName("goBtn")
-        self.stop_btn = QPushButton("停止")
+        self.stop_btn = QPushButton()
         self.stop_btn.setObjectName("stopBtn")
-        self.pause_btn = QPushButton("暂停")
+        self.pause_btn = QPushButton()
         self.pause_btn.setObjectName("pauseBtn")
-        self.stage_btn = QPushButton("全屏")
+        self.stage_btn = QPushButton()
         self.stage_btn.setObjectName("stageBtn")
-        self.unstage_btn = QPushButton("收起全屏")
+        self.unstage_btn = QPushButton()
         self.unstage_btn.setObjectName("unstageBtn")
+        row.addStretch(1)
+        for button, label in ((self.stop_btn, "停止"), (self.prev_btn, "上一条"),
+                              (self.go_btn, "播放"), (self.next_btn, "下一条"),
+                              (self.pause_btn, "暂停"), (self.stage_btn, "全屏"),
+                              (self.unstage_btn, "收起全屏")):
+            button.setIconSize(QSize(22, 22))
+            button.setToolTip(label)
+            button.setAccessibleName(label)
+            row.addWidget(button)
         self.prev_btn.clicked.connect(lambda: self.step_cue(-1))
         self.next_btn.clicked.connect(lambda: self.step_cue(1))
         self.go_btn.clicked.connect(self.on_go)
@@ -1379,6 +1498,22 @@ class MainWindow(QMainWindow):
         self.panic_btn.setObjectName("panicBtn")
         self.panic_btn.setToolTip("所有声画立刻停（Ctrl+Esc）")
         self.panic_btn.clicked.connect(self.on_panic)
+        row.addWidget(self.panic_btn)
+        row.addStretch(1)
+        self.volume_label = QLabel("音量 100")
+        self.volume_label.setObjectName("volumeLabel")
+        self.volume_slider = VolumeSlider(Qt.Orientation.Horizontal)
+        self.volume_slider.setObjectName("volumeSlider")
+        self.volume_slider.setRange(0, 100)
+        self.volume_slider.blockSignals(True)
+        self.volume_slider.setValue(int(self.controller.output_volume))
+        self.volume_slider.blockSignals(False)
+        self.volume_slider.setMinimumWidth(80)
+        self.volume_slider.setMaximumWidth(110)
+        self.volume_slider.setToolTip("输出音量，本机记住")
+        self.volume_slider.valueChanged.connect(self._on_volume_changed)
+        row.addWidget(self.volume_label)
+        row.addWidget(self.volume_slider)
         self.mute_btn = QPushButton("静音")
         self.mute_btn.setObjectName("muteBtn")
         self.mute_btn.setToolTip("一键静音全部声道（M）")
@@ -1389,27 +1524,30 @@ class MainWindow(QMainWindow):
         self.hold_btn.clicked.connect(self.on_toggle_hold)
         self.duck_btn = QPushButton("压低音频")
         self.duck_btn.setObjectName("duckBtn")
-        self.duck_btn.setToolTip("讲话时约 0.9 秒把当前音频渐变到设定音量的 60%，再按渐变恢复（D）")
+        self.duck_btn.setToolTip("讲话时渐低音频，再按渐变恢复（D）")
         self.duck_btn.clicked.connect(self.on_toggle_duck)
-        for btn in (
-            self.prev_btn,
-            self.next_btn,
-            self.go_btn,
-            self.stop_btn,
-            self.pause_btn,
-            self.stage_btn,
-            self.unstage_btn,
-            self.panic_btn,
-        ):
-            row.addWidget(btn)
-        row.addStretch(1)
-        for btn in (self.mute_btn, self.hold_btn, self.duck_btn):
-            row.addWidget(btn)
+        for button in (self.mute_btn, self.hold_btn, self.duck_btn):
+            row.addWidget(button)
         box.addLayout(row)
         self.hotkey_bar = QLabel("空格 播放　P 暂停　M 静音　B 封面　D 压低　Esc 停　Ctrl+Esc 全停　F11 演出　1–9 点播")
         self.hotkey_bar.setObjectName("hotkeyBar")
         box.addWidget(self.hotkey_bar)
+        self._update_transport_icons()
         return bar
+
+    def _update_transport_icons(self) -> None:
+        color = self.theme["fg"]
+        for button, kind in ((self.prev_btn, "previous"), (self.next_btn, "next"),
+                             (self.stop_btn, "stop"), (self.stage_btn, "fullscreen"),
+                             (self.unstage_btn, "exit_fullscreen"),
+                             (self.library_audio_stop, "stop"),
+                             (self.library_stage_btn, "fullscreen"),
+                             (self.library_unstage_btn, "exit_fullscreen")):
+            button.setIcon(player_icon(kind, color))
+        self.go_btn.setIcon(player_icon("play", color, color))
+        self.library_audio_play.setIcon(player_icon("play", color, color))
+        self.pause_btn.setIcon(player_icon("play" if self.pause_btn.objectName() == "resumeBtn" else "pause", color))
+        self.library_audio_pause.setIcon(player_icon("play" if self.library_audio_pause.objectName() == "libResumeBtn" else "pause", color))
 
     def current_row(self) -> int:
         items = self.table.selectedIndexes()
@@ -1479,7 +1617,7 @@ class MainWindow(QMainWindow):
         else:
             t = self.theme
             self.now_card.setStyleSheet(
-                f"QFrame#nowCard {{ background:{t['now_idle_bg']}; border-left: 4px solid {t['now_idle_accent']}; }}"
+                f"QFrame#nowCard {{ background:{t['now_idle_bg']}; border: none; border-radius: 9px; }}"
             )
             self.now_kicker.setStyleSheet(f"color:{t['now_idle_accent']};")
             self.now_title.setStyleSheet(f"color:{t['now_idle_title']};")
@@ -1640,6 +1778,10 @@ class MainWindow(QMainWindow):
             keep_row = self.current_row()
         self._filling = True
         self.table.setRowCount(len(self.project.cues))
+        self.cue_empty.setVisible(not self.project.cues)
+        if not self.project.cues:
+            self.cue_empty.raise_()
+        self.cue_count.setText(f"{len(self.project.cues)} 条节目")
         for i, cue in enumerate(self.project.cues):
             values = [str(i + 1), cue.label(), cue.name, cue.notes, cue.path]
             for col, text in enumerate(values):
@@ -2032,7 +2174,9 @@ class MainWindow(QMainWindow):
             self.show_mode_act.blockSignals(False)
         inspector = getattr(self, "inspector_panel", None)
         if inspector is not None:
-            inspector.setVisible(not self._show_mode)
+            if self._show_mode and self.side_tabs.currentIndex() == 1:
+                self.side_tabs.setCurrentIndex(0)
+            self.side_tabs.setTabVisible(1, not self._show_mode)
         add = getattr(self, "_cue_edit_btns", None)
         if add and self._show_mode:
             for btn in add:
@@ -2049,7 +2193,7 @@ class MainWindow(QMainWindow):
             if self._show_mode:
                 self._edit_split_sizes = self.main_split.sizes()
                 total = sum(self.main_split.sizes()) or 1000
-                self.main_split.setSizes([int(total * 0.62), 0, int(total * 0.38)])
+                self.main_split.setSizes([int(total * 0.62), int(total * 0.38)])
             elif self._edit_split_sizes:
                 self.main_split.setSizes(self._edit_split_sizes)
         self._refresh_status()
@@ -2534,8 +2678,10 @@ class MainWindow(QMainWindow):
                 loop=cue_type == "audio",
             )
         )
-        self.name_edit.setFocus()
-        self.name_edit.selectAll()
+        if not self._show_mode:
+            self.side_tabs.setCurrentIndex(1)
+            self.name_edit.setFocus()
+            self.name_edit.selectAll()
 
     def add_library_category(self) -> None:
         """编辑区分类旁的 + ：新建分类并赋给当前选中的临时媒体。"""
@@ -2584,8 +2730,10 @@ class MainWindow(QMainWindow):
         self.reload_library("audio", keep_id=cue.id)
         self.fill_inspector()
         self._refresh_status()
-        self.name_edit.setFocus()
-        self.name_edit.selectAll()
+        if not self._show_mode:
+            self.side_tabs.setCurrentIndex(1)
+            self.name_edit.setFocus()
+            self.name_edit.selectAll()
 
     def _library_lists(self) -> list[QTableWidget]:
         lists = []
@@ -3474,11 +3622,19 @@ class MainWindow(QMainWindow):
         self.progress_bar.update()
 
     def _set_btn(self, btn: QPushButton, text: str, name: str) -> None:
-        if btn.text() != text or btn.objectName() != name:
-            btn.setText(text)
+        icon_buttons = (self.go_btn, self.pause_btn, self.stage_btn, self.library_audio_play,
+                        self.library_audio_pause, self.library_audio_stop, self.library_stage_btn)
+        display_text = "" if btn in icon_buttons else text
+        if btn in icon_buttons:
+            btn.setToolTip(text)
+            btn.setAccessibleName(text)
+        if btn.text() != display_text or btn.objectName() != name:
+            btn.setText(display_text)
             btn.setObjectName(name)
             btn.style().unpolish(btn)
             btn.style().polish(btn)
+            if btn in icon_buttons:
+                self._update_transport_icons()
 
     def _refresh_transport_labels(self, cue: Cue | None) -> None:
         action = self.controller.go_action(cue)
@@ -3565,6 +3721,9 @@ class MainWindow(QMainWindow):
         alert = (st.message or "").strip()
         if not self.settings.resolved_mpv().exists():
             alert = "找不到自带 mpv：请确认 vendor/mpv/mpv.exe 还在"
+        agent_error = getattr(self, "_agent_control_error", "")
+        if agent_error:
+            alert = f"{alert}　{agent_error}" if alert else agent_error
         if alert:
             self.status_label.setText(alert)
             self.status_label.setVisible(True)
@@ -3596,8 +3755,12 @@ class MainWindow(QMainWindow):
         return len(sizes) == len(mins) and all(value >= minimum for value, minimum in zip(sizes, mins))
 
     def _restore_splitters(self) -> None:
-        if hasattr(self, "main_split") and self._usable_sizes(self.settings.splitter_main, [200, 160, 140]):
-            self.main_split.setSizes(self.settings.splitter_main)
+        if hasattr(self, "main_split"):
+            sizes = self.settings.splitter_main
+            if self._usable_sizes(sizes, [200, 160, 140]):
+                sizes = [sizes[0], sizes[1] + sizes[2]]
+            if self._usable_sizes(sizes, [200, 260]):
+                self.main_split.setSizes(sizes)
         self._layout_ready = True
         self._update_proj_warn()
 
@@ -3607,7 +3770,7 @@ class MainWindow(QMainWindow):
         self.settings.window_geometry = bytes(self.saveGeometry().toHex()).decode("ascii")
         if hasattr(self, "main_split"):
             sizes = self.main_split.sizes()
-            if self._usable_sizes(sizes, [200, 160, 140]):
+            if self._usable_sizes(sizes, [200, 260]):
                 self.settings.splitter_main = sizes
         self.settings.output_volume = int(self.controller.output_volume)
         self.settings.library_volume = int(self.controller.library_volume)

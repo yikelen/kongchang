@@ -49,6 +49,27 @@
 
 ---
 
+## 本机 Agent 控制
+
+软件运行时，本机 Agent 可通过命令行查询实时状态、管理节目单和素材库、控制播放与全停。接口仅监听本机，并使用当前用户可访问的随机令牌；完整方法、参数和安全边界见 [Agent 控制接口](docs/agent-control.md)。
+
+```powershell
+.\vendor\python\python.exe scripts\agent_ctl.py call system.info
+.\vendor\python\python.exe scripts\agent_ctl.py call state.get
+```
+
+### 安装控场 Skill
+
+源码和便携包均包含 `skills/kongchang-control` 及其独立 CLI。在目标 Windows 电脑上解压软件后，双击 **安装Agent技能.bat**，或在软件目录运行：
+
+```powershell
+.\vendor\python\python.exe scripts\install_kongchang_skill.py
+```
+
+安装器将 Skill 安装到当前用户的 Codex 技能目录，并记录本机软件位置。已有同名 Skill 时默认不会覆盖；需要更新时运行上述命令并加 `--replace`，安装器会先备份旧版本。安装后在新的 Codex 对话中使用 `$kongchang-control`。先启动控场软件，再让 Agent 查询节目单、管理素材或控制播放。
+
+如果移动软件目录，重新安装 Skill 或通过 CLI 的 `--app-dir` 指定新目录；也可设置 `KONGCHANG_HOME`。完整调用方式见 [Skill 说明](skills/kongchang-control/SKILL.md) 和 [Agent 控制接口](docs/agent-control.md)。
+
 ## 界面说明
 
 当前主界面（深色主题；不另做分区圈注，避免标错）：

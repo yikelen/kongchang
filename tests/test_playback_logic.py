@@ -5,12 +5,14 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.controller import ShowController
+from src.mpv_ipc import MpvClient, MpvError
 from src.models import (
     LIB_PLAY_ALL,
     LIB_PLAY_DEFAULT,
@@ -190,6 +192,45 @@ class PlayModeTests(unittest.TestCase):
 
 
 class IsolationTests(unittest.TestCase):
+    def test_loading_audio_still_prevents_overlapping_audio(self) -> None:
+        ctl = ShowController()
+        show = FakeClient(**{"idle-active": True, "path": None})
+        show.is_loading = True
+        ctl.audio = show
+        ctl.lib_audio = FakeClient()
+        with tempfile.TemporaryDirectory() as tmp:
+            ctl._activate_audio(_cue("lib"), Path(tmp) / "bed.wav", from_library=True, stop_video=False)
+        self.assertTrue(show.stopped)
+
+    def test_loading_library_audio_mutes_new_video(self) -> None:
+        ctl = ShowController()
+        ctl.lib_audio = FakeClient(**{"idle-active": True, "path": None})
+        ctl.lib_audio.is_loading = True
+        ctl.video = FakeClient()
+        with tempfile.TemporaryDirectory() as tmp:
+            media = Path(tmp) / "clip.mp4"
+            media.write_bytes(b"x")
+            ctl._activate_video(_cue("v", kind="video"), media, from_library=True, autoplay=True)
+        self.assertTrue(ctl.video.props.get("mute"))
+
+    def test_loading_fade_in_waits_then_ramps(self) -> None:
+        ctl = ShowController()
+        ctl.audio = FakeClient(**{"idle-active": True, "path": None})
+        ctl.audio.is_loading = True
+        ctl.pending_fade_in = "show"
+        self.assertTrue(ctl.begin_fade_in())
+        self.assertTrue(ctl.fade_tick())
+        self.assertEqual(ctl.audio.props["volume"], 0)
+        ctl.audio.is_loading = False
+        ctl.audio.props.update({"idle-active": False, "path": "track"})
+        self.assertTrue(ctl.fade_tick())
+        self.assertGreater(ctl.audio.props["volume"], 0)
+
+    def test_preheated_player_and_idle_after_eof_are_not_active(self) -> None:
+        client = FakeClient(**{"idle-active": True, "path": None})
+        client.media_path = "old-media"
+        self.assertFalse(ShowController._is_active(client))
+
     def test_show_video_stops_show_audio(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             media = Path(tmp) / "clip.mp4"
@@ -287,6 +328,58 @@ class IsolationTests(unittest.TestCase):
         ctl.video = FakeClient(pause=False, **{"eof-reached": False})
         ctl.video_from_library = True
         self.assertTrue(ctl.library_reached_eof())
+
+
+class LoadingEventTests(unittest.TestCase):
+    def test_replace_ignores_old_end_and_waits_for_new_file(self) -> None:
+        client = MpvClient(Path("mpv.exe"), "test")
+        def command(args):
+            if args[0] == "loadfile":
+                client._dispatch({"event": "end-file", "playlist_entry_id": 1, "reason": "stop"})
+                return {"playlist_entry_id": 2}
+            return None
+        with patch.object(client, "command", side_effect=command):
+            client.loadfile(Path("new.mp3"), paused=False)
+        self.assertTrue(client.is_loading)
+        client._dispatch({"event": "end-file", "playlist_entry_id": 1, "reason": "stop"})
+        self.assertTrue(client.is_loading)
+        client._dispatch({"event": "start-file", "playlist_entry_id": 2})
+        client.props.update({"idle-active": True, "path": None})
+        client._dispatch({"event": "file-loaded"})
+        self.assertFalse(client.is_loading)
+        self.assertTrue(client.has_loaded_media)
+        self.assertTrue(ShowController._is_active(client))
+        client._dispatch({"event": "end-file", "playlist_entry_id": 2, "reason": "eof"})
+        self.assertFalse(client.has_loaded_media)
+        self.assertFalse(ShowController._is_active(client))
+
+    def test_load_events_before_reply_and_failed_file_end(self) -> None:
+        client = MpvClient(Path("mpv.exe"), "test")
+        def command(args):
+            if args[0] == "loadfile":
+                client._dispatch({"event": "start-file", "playlist_entry_id": 4})
+                client._dispatch({"event": "end-file", "playlist_entry_id": 4, "reason": "error"})
+                return {"playlist_entry_id": 4}
+            return None
+        with patch.object(client, "command", side_effect=command):
+            client.loadfile(Path("bad.mp3"), paused=False)
+        self.assertFalse(client.is_loading)
+
+    def test_failure_and_missing_events_cannot_leave_loading_stuck(self) -> None:
+        client = MpvClient(Path("mpv.exe"), "test")
+        with patch.object(client, "command", side_effect=MpvError("error")):
+            with self.assertRaises(MpvError):
+                client.loadfile(Path("bad.mp3"), paused=False)
+        self.assertFalse(client.is_loading)
+        with patch.object(client, "command", return_value={"playlist_entry_id": 5}):
+            client.loadfile(Path("waiting.mp3"), paused=False)
+        self.assertTrue(client.is_loading)
+        with patch("src.mpv_ipc.time.monotonic", return_value=client._loading_since + 31):
+            self.assertFalse(client.is_loading)
+        client._dispatch({"event": "start-file", "playlist_entry_id": 5})
+        client._dispatch({"event": "file-loaded"})
+        self.assertTrue(client.has_loaded_media)
+        self.assertTrue(ShowController._is_active(client))
 
 
 if __name__ == "__main__":

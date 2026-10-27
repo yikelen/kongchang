@@ -214,6 +214,13 @@ Agent 无法可靠操作 GUI 菜单时，可告诉用户上述两步；或说明
 
 ---
 
+
+### 本机 Agent 实时控制
+
+软件运行时，优先通过 `scripts\agent_ctl.py` 操作当前进程，而不是直接改写正在使用的工程 JSON。接口仅限本机；方法、参数、错误和版本校验见 `docs\agent-control.md`。先调用 `system.info` / `state.get` / `project.get`，修改时使用条目 ID 和可选 `expected_revision`。不要输出、提交或转发 `data\agent-control.json` 中的 token。
+
+软件自带 `skills\kongchang-control` 及 CLI，可双击 `安装Agent技能.bat`，或执行 `vendor\python\python.exe scripts\install_kongchang_skill.py` 安装到当前用户的 Codex 技能目录。默认不覆盖同名 Skill；明确需要更新时可加 `--replace`，安装器会备份旧版本。移动软件后重新安装或使用 CLI 的 `--app-dir` 指向新位置。具体用法见该 Skill 的 `SKILL.md`。
+
 ## 6. 生成或修改工程 JSON
 
 给用户排一场活动时，输出 **一个文件夹 + 一份 json**，`path` 相对 json 所在目录。

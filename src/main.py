@@ -84,6 +84,8 @@ def main(on_ready=None) -> int:
     project_path = Path(sys.argv[1]) if len(sys.argv) > 1 else None
     window = MainWindow(project_path)
     server = start_singleton_server(window.bring_to_front, window.force_close)
+    from src.agent_integration import start_agent_control
+    agent_server = start_agent_control(window, app)
     app.aboutToQuit.connect(window.controller.shutdown)
     if on_ready is not None:
         try:

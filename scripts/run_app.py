@@ -121,6 +121,8 @@ def main() -> int:
         if not app.windowIcon().isNull():
             window.setWindowIcon(app.windowIcon())
         server = start_singleton_server(window.bring_to_front, window.force_close)
+        from src.agent_integration import start_agent_control
+        agent_server = start_agent_control(window, app)
         app.aboutToQuit.connect(window.controller.shutdown)
 
         _close_splash()

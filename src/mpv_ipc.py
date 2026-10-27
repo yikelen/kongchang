@@ -48,6 +48,13 @@ class MpvClient:
         self._reader: threading.Thread | None = None
         self._lock = threading.Lock()
         self._write_lock = threading.Lock()
+        self._load_lock = threading.Lock()
+        self._load_state_lock = threading.Lock()
+        self._loading_since: float | None = None
+        self._loading_entry_id: int | None = None
+        self._current_entry_id: int | None = None
+        self._load_finished_entries: dict[int, str] = {}
+        self._loaded_entry_id: int | None = None
         self._pending: dict[int, tuple[threading.Event, dict[str, Any]]] = {}
         self._req = 0
         self._running = False
@@ -58,6 +65,32 @@ class MpvClient:
     @property
     def alive(self) -> bool:
         return self.proc is not None and self.proc.poll() is None and self._fh is not None
+
+    @property
+    def is_loading(self) -> bool:
+        """A load in flight, bounded even if mpv never delivers an event."""
+        with self._load_state_lock:
+            if self._loading_since is not None and time.monotonic() - self._loading_since > 30:
+                self._loading_since = None
+                self.props["idle-active"] = True
+                self.props["path"] = None
+            return self._loading_since is not None
+
+    @property
+    def has_loaded_media(self) -> bool:
+        """True after file-loaded until this playlist entry ends or is replaced."""
+        with self._load_state_lock:
+            return self._loaded_entry_id is not None
+
+    def _finish_load(self, entry_id: int, result: str) -> None:
+        # Called under _load_state_lock; property notifications may lag events.
+        self._loading_since = None
+        if result == "file-loaded":
+            self._loaded_entry_id = entry_id
+        else:
+            self._loaded_entry_id = None
+            self.props["idle-active"] = True
+            self.props["path"] = None
 
     def start(self, extra_args: list[str]) -> None:
         if not self.exe.exists():
@@ -104,6 +137,12 @@ class MpvClient:
 
     def stop(self) -> None:
         self._running = False
+        with self._load_state_lock:
+            self._loading_since = None
+            self._loading_entry_id = None
+            self._current_entry_id = None
+            self._loaded_entry_id = None
+            self._load_finished_entries.clear()
         if self.alive:
             try:
                 self.command(["quit"], timeout=0.4)
@@ -161,10 +200,28 @@ class MpvClient:
         return self.command(["set_property", name, value])
 
     def loadfile(self, path: Path, paused: bool, loop: bool = False) -> None:
-        self.command(["loadfile", _mpv_path_arg(path), "replace"])
-        self.set("loop-file", "inf" if loop else "no")
-        self.set("pause", paused)
-        self.media_path = str(path.resolve())
+        # Events can precede the command reply. Record them until the reply
+        # identifies the new playlist entry; an old end-file must not cancel it.
+        with self._load_lock:
+            with self._load_state_lock:
+                self._loading_since = time.monotonic()
+                self._loading_entry_id = None
+                self._loaded_entry_id = None
+                self._load_finished_entries.clear()
+            try:
+                result = self.command(["loadfile", _mpv_path_arg(path), "replace"])
+                entry_id = result.get("playlist_entry_id") if isinstance(result, dict) else None
+                with self._load_state_lock:
+                    self._loading_entry_id = entry_id
+                    if entry_id is not None and entry_id in self._load_finished_entries:
+                        self._finish_load(entry_id, self._load_finished_entries[entry_id])
+                self.set("loop-file", "inf" if loop else "no")
+                self.set("pause", paused)
+                self.media_path = str(path.resolve())
+            except Exception:
+                with self._load_state_lock:
+                    self._loading_since = None
+                raise
 
     def _connect_pipe(self, timeout: float) -> Any:
         pipe = rf"\\.\pipe\{self.pipe_name}"
@@ -206,6 +263,25 @@ class MpvClient:
                 self._dispatch(msg)
 
     def _dispatch(self, msg: dict[str, Any]) -> None:
+        event_name = msg.get("event")
+        if event_name in ("start-file", "file-loaded", "end-file"):
+            with self._load_state_lock:
+                if event_name == "start-file":
+                    self._current_entry_id = msg.get("playlist_entry_id")
+                elif self._loading_since is not None:
+                    entry_id = (self._current_entry_id if event_name == "file-loaded"
+                                else msg.get("playlist_entry_id"))
+                    if entry_id is not None:
+                        self._load_finished_entries[entry_id] = event_name
+                    if entry_id is not None and entry_id == self._loading_entry_id:
+                        self._finish_load(entry_id, event_name)
+                elif (event_name == "file-loaded" and self._loading_entry_id is not None
+                      and self._current_entry_id == self._loading_entry_id):
+                    # A very slow file may still open after the loading timeout.
+                    self._loaded_entry_id = self._current_entry_id
+                    self.props["idle-active"] = False
+                elif event_name == "end-file" and msg.get("playlist_entry_id") == self._loaded_entry_id:
+                    self._loaded_entry_id = None
         if msg.get("event") == "client-message":
             args = [str(item) for item in (msg.get("args") or [])]
             callback = self.on_client_message

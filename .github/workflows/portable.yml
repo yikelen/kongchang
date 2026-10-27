@@ -37,6 +37,8 @@ jobs:
           if errorlevel 8 exit /b 1
           tar.exe -a -c -f %NAME%.zip -C pack kongchang
           if not exist %NAME%.zip exit /b 1
+          python -u scripts/check_portable_archive.py %NAME%.zip
+          if errorlevel 1 exit /b 1
           echo ASSET=%NAME%.zip>> %GITHUB_ENV%
           dir %NAME%.zip
 

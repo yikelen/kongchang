@@ -148,6 +148,55 @@ LIGHT: Theme = {
     "lib_cat_fg": "#2f6b4f",
 }
 
+# The desktop console uses the same neutral player palette in both themes.
+# Keep the semantic live, paused and warning colors distinct for show operation.
+DARK.update({
+    "bg": "#17171b", "panel": "#202024", "table": "#202024", "table_alt": "#242428",
+    "fg": "#f3f2f4", "muted": "#b1adb5", "border": "#39383d", "grid": "#343338",
+    "btn": "#323136", "btn_hover": "#414046", "btn_pressed": "#29282d", "add_btn": "#323136",
+    "nav": "#29282d", "nav_hover": "#414046", "nav_fg": "#f3f2f4",
+    "go": "#f3f2f4", "go_hover": "#ffffff", "go_fg": "#202024",
+    "stop": "#ac4856", "stop_hover": "#c95b69", "stop_fg": "#ffffff",
+    "disabled_bg": "#2c2b30", "disabled_fg": "#8d8990",
+    "pause": "#39383d", "resume": "#386c62", "resume_hover": "#468579", "resume_fg": "#ffffff",
+    "stage": "#cba369", "stage_fg": "#2c2114", "unstage": "#514e52",
+    "select": "#53343d", "select_fg": "#ffffff", "combo_border": "#514e54",
+    "covers": "#e3aa5e", "menu_sel": "#6f3b49", "menu_sel_fg": "#ffffff",
+    "now_bar": "#202024", "now_card": "#343338", "now_kicker": "#f18a9b", "now_title": "#ffffff",
+    "now_notes": "#bdb9c0", "now_idle_bg": "#29282d", "now_idle_accent": "#c0b9bd",
+    "now_idle_title": "#f7f5f6", "status_bg": "#202024", "progress_chunk": "#f18a9b",
+    "slider_handle": "#f7f5f6", "slider_disabled": "#77747a",
+    "playing": "#765b36", "playing_sel": "#8a6c40", "playing_fg": "#fff6e5", "playing_accent": "#f1c67c",
+    "paused": "#514d40", "paused_sel": "#67604b", "paused_fg": "#fff1d5", "paused_accent": "#dfbd7c",
+    "note_bg": "#242428", "note_fg": "#b8b4bc", "type_audio": "#ec8396", "type_video": "#e5ba7c",
+    "type_note": "#aaa6ad", "missing": "#f2949f", "missing_live": "#ffe2e5", "lib_hover": "#39383e",
+    "lib_notes": "#aaa6ad", "lib_notes_sel": "#f0ccd3", "lib_notes_playing": "#fff2dd",
+    "lib_notes_paused": "#fff1d5", "lib_cat_bg": "#29282d", "lib_cat_fg": "#dbbdc6",
+})
+LIGHT.update({
+    "bg": "#f1eff1", "panel": "#ffffff", "table": "#ffffff", "table_alt": "#f8f6f8",
+    "fg": "#252328", "muted": "#69636b", "border": "#dedade", "grid": "#e9e6e9",
+    "btn": "#efedef", "btn_hover": "#e2dfe3", "btn_pressed": "#d8d3d8", "add_btn": "#efedef",
+    "nav": "#efedef", "nav_hover": "#e2dfe3", "nav_fg": "#29272b",
+    "go": "#262429", "go_hover": "#464249", "go_fg": "#ffffff",
+    "stop": "#aa3444", "stop_hover": "#c34757", "stop_fg": "#ffffff",
+    "disabled_bg": "#ece9ec", "disabled_fg": "#827d83",
+    "pause": "#6d6870", "resume": "#35765f", "resume_hover": "#438a71", "resume_fg": "#ffffff",
+    "stage": "#e3c285", "stage_fg": "#30220d", "unstage": "#68626a",
+    "select": "#f7dce3", "select_fg": "#48232e", "combo_border": "#cdc7cd",
+    "covers": "#a36212", "menu_sel": "#f5d8e0", "menu_sel_fg": "#48232e",
+    "now_bar": "#ffffff", "now_card": "#f8e9eb", "now_kicker": "#aa3d54", "now_title": "#2b2024",
+    "now_notes": "#69636b", "now_idle_bg": "#f3f0f2", "now_idle_accent": "#a2495c",
+    "now_idle_title": "#262429", "status_bg": "#ffffff", "progress_chunk": "#c34560",
+    "slider_handle": "#302b31", "slider_disabled": "#b5afb6", "playing": "#f3d8a4",
+    "playing_sel": "#eec984", "playing_fg": "#3c2a12", "playing_accent": "#8d5b1b",
+    "paused": "#e9e0cf", "paused_sel": "#dfd1b7", "paused_fg": "#46371e", "paused_accent": "#93703f",
+    "note_bg": "#f6f4f6", "note_fg": "#6e686f", "type_audio": "#a33950", "type_video": "#a45c1f",
+    "type_note": "#6e686f", "missing": "#b02c3a", "missing_live": "#8b1a1a", "lib_hover": "#efedef",
+    "lib_notes": "#6e686f", "lib_notes_sel": "#60434b", "lib_notes_playing": "#57411e",
+    "lib_notes_paused": "#564a32", "lib_cat_bg": "#f2eef1", "lib_cat_fg": "#76505d",
+})
+
 _QSS = """
 QMainWindow, QWidget#root {
     background: @bg;
@@ -576,6 +625,100 @@ QSlider#volumeSlider:disabled::handle:horizontal {
 QSlider#volumeSlider:disabled::sub-page:horizontal {
     background: @disabled_bg;
 }
+
+/* Modern console surfaces; the original semantic controls remain separate. */
+QMainWindow, QWidget#root { font-family: "Microsoft YaHei UI", "Segoe UI"; }
+QMenuBar { background: @bg; border: none; padding: 4px 10px; }
+QMenuBar::item { padding: 6px 9px; border-radius: 5px; }
+QMenu { border: 1px solid @border; border-radius: 8px; padding: 5px; }
+QMenu::item { padding: 7px 22px; border-radius: 5px; }
+QWidget#workspace, QWidget#footerWrap { background: @bg; }
+QFrame#cuePanel, QFrame#sidePanel, QFrame#transport, QFrame#nowNext {
+    background: @panel; border: none; border-radius: 12px;
+}
+QFrame#topBar, QFrame#library, QFrame#inspector { background: @panel; border: none; }
+QFrame#libraryBed { background: @panel; border: none; border-top: 1px solid @grid; }
+QTabWidget#sideTabs::pane { background: @panel; border: none; }
+QTabWidget#sideTabs::tab-bar { left: 18px; }
+QTabBar::tab { background: transparent; color: @muted; padding: 13px 15px 10px; border: none; border-bottom: 2px solid transparent; font-weight: 600; }
+QTabBar::tab:selected { color: @fg; border-bottom: 2px solid @progress_chunk; }
+QTabBar::tab:hover:!selected { color: @fg; }
+QLabel#pageTitle { font-size: 26px; font-weight: 700; color: @fg; }
+QLabel#pageSubtitle, QLabel#panelDescription, QLabel#hint { color: @muted; font-size: 13px; }
+QLabel#secTitle { color: @fg; font-size: 16px; font-weight: 700; }
+QLabel#countBadge { color: @muted; background: @btn; padding: 5px 10px; border-radius: 11px; font-size: 12px; }
+QLabel#emptyState { color: @muted; background: transparent; font-size: 14px; }
+QPushButton { border-radius: 7px; padding: 8px 12px; }
+QPushButton:focus { border: 1px solid @progress_chunk; }
+QPushButton#addBtn { background: @add_btn; font-size: 13px; font-weight: 600; }
+QPushButton#addBtn:hover { background: @btn_hover; }
+QLineEdit, QPlainTextEdit, QDoubleSpinBox, QComboBox { background: @bg; border: 1px solid @border; border-radius: 7px; padding: 7px; }
+QLineEdit:focus, QPlainTextEdit:focus, QDoubleSpinBox:focus { border: 1px solid @progress_chunk; }
+QTableWidget, QTableWidget#libraryList { border: none; border-radius: 7px; }
+QTableWidget#libraryList { background: @table_alt; }
+QHeaderView::section { background: transparent; border-right: none; border-bottom: 1px solid @grid; padding: 9px 8px; font-size: 12px; }
+QSplitter::handle:horizontal { background: @bg; width: 10px; }
+QSplitter::handle:horizontal:hover { background: @border; border-radius: 4px; }
+QFrame#nowCard, QFrame#nextCard { border: none; border-radius: 9px; }
+QFrame#nowCard { background: @now_card; }
+QFrame#nextCard { background: @table_alt; }
+QLabel#nowKicker, QLabel#nextKicker { font-size: 11px; font-weight: 600; }
+QLabel#nowTitle, QLabel#nextTitle { font-size: 16px; font-weight: 700; }
+QLabel#nowNotes { font-size: 12px; }
+QLabel#nowRemain { font-size: 18px; }
+QLabel#playerArtwork { background: @btn; border-radius: 10px; }
+QLabel#progressClock, QLabel#libSeekTime { color: @muted; font-size: 12px; min-width: 0; }
+QLabel#volumeLabel { color: @muted; font-size: 12px; min-width: 0; }
+QProgressBar#mediaProgress { background: @border; border: none; border-radius: 4px; }
+QProgressBar#mediaProgress::chunk { background: @progress_chunk; border-radius: 4px; }
+QProgressBar#vuBar { background: @border; border: none; border-radius: 4px; }
+QProgressBar#vuBar::chunk { background: @progress_chunk; border-radius: 4px; }
+QSlider#volumeSlider::groove:horizontal { background: @border; border: none; height: 5px; border-radius: 2px; }
+QSlider#volumeSlider::sub-page:horizontal { background: @progress_chunk; border-radius: 2px; }
+QSlider#volumeSlider::handle:horizontal { background: @slider_handle; width: 12px; margin: -4px 0; border-radius: 6px; }
+QScrollBar:vertical { background: transparent; width: 9px; margin: 2px; }
+QScrollBar::handle:vertical { background: @border; border-radius: 4px; min-height: 24px; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+/* Buttons for global, potentially disruptive operations stay labelled and distinct. */
+QPushButton#panicBtn { background: #9e3343; color: #ffffff; min-width: 56px; min-height: 38px; padding: 0 12px; font-size: 13px; font-weight: 700; }
+QPushButton#panicBtn:hover { background: #bf4657; }
+QPushButton#muteBtn, QPushButton#holdBtn, QPushButton#duckBtn,
+QPushButton#muteOnBtn, QPushButton#holdOnBtn, QPushButton#duckOnBtn {
+    min-width: 0; min-height: 38px; padding: 0 10px; font-size: 13px; border-radius: 7px;
+}
+QPushButton#muteBtn, QPushButton#holdBtn, QPushButton#duckBtn { background: @btn; color: @fg; }
+QPushButton#muteOnBtn { background: @stop; color: @stop_fg; }
+QPushButton#holdOnBtn { background: @stage; color: @stage_fg; }
+QPushButton#duckOnBtn { background: @resume; color: @resume_fg; }
+QPushButton#libStopSplitBtn { background: @btn; color: @fg; border-radius: 6px; }
+QPushButton#libStopSplitBtn:hover { background: @btn_hover; }
+QPushButton#libStopSplitBtn:disabled { background: @disabled_bg; color: @disabled_fg; }
+QPushButton#libModeBtn { color: @lib_cat_fg; border-radius: 5px; }
+QPushButton#libModeBtn[mode="repeat_one"], QPushButton#libModeBtn[mode="sequence"],
+QPushButton#libModeBtn[mode="repeat_all"] { border-color: @progress_chunk; color: @type_audio; }
+
+/* Icon-only transport: a generous hit target with the same ring on each channel. */
+QPushButton#goBtn, QPushButton#libGoBtn {
+    background: @panel; border: 3px solid @progress_chunk; border-radius: 29px;
+    min-width: 52px; max-width: 52px; min-height: 52px; max-height: 52px; padding: 0;
+}
+QPushButton#goBtn:hover, QPushButton#libGoBtn:hover { background: @btn_hover; border-color: @progress_chunk; }
+QPushButton#goBtn:disabled, QPushButton#libGoBtn:disabled { background: @panel; border-color: @disabled_fg; }
+QPushButton#navBtn, QPushButton#pauseBtn, QPushButton#resumeBtn, QPushButton#stopBtn,
+QPushButton#stageBtn, QPushButton#unstageBtn, QPushButton#libPauseBtn, QPushButton#libResumeBtn,
+QPushButton#libStopBtn, QPushButton#libStageBtn, QPushButton#libUnstageBtn {
+    background: transparent; border: none; min-width: 44px; max-width: 44px;
+    min-height: 44px; max-height: 44px; padding: 0; border-radius: 22px;
+}
+QPushButton#navBtn:hover, QPushButton#pauseBtn:hover, QPushButton#resumeBtn:hover, QPushButton#stopBtn:hover,
+QPushButton#stageBtn:hover, QPushButton#unstageBtn:hover, QPushButton#libPauseBtn:hover, QPushButton#libResumeBtn:hover,
+QPushButton#libStopBtn:hover, QPushButton#libStageBtn:hover, QPushButton#libUnstageBtn:hover { background: @btn_hover; }
+QPushButton#pauseBtn:disabled, QPushButton#resumeBtn:disabled, QPushButton#stopBtn:disabled,
+QPushButton#stageBtn:disabled, QPushButton#unstageBtn:disabled, QPushButton#libPauseBtn:disabled,
+QPushButton#libResumeBtn:disabled, QPushButton#libStopBtn:disabled, QPushButton#libStageBtn:disabled,
+QPushButton#libUnstageBtn:disabled { background: transparent; }
+QPushButton#goBtn:focus, QPushButton#libGoBtn:focus { border: 3px solid @progress_chunk; }
+QProgressBar#mediaProgress { min-height: 20px; max-height: 20px; border: none; background: transparent; }
 """
 
 

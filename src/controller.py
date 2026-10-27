@@ -485,6 +485,17 @@ class ShowController:
             if done is not None:
                 done()
             return False
+        if self._fade_in and getattr(client, "is_loading", False):
+            # Start the ramp when the track is ready, rather than silently
+            # completing it while mpv is still opening the file.
+            return True
+        if self._fade_in and not self._is_active(client):
+            self._fade_in = False
+            self._cancel_fade(library=library)
+            done = self.on_fade_done
+            if done is not None:
+                done()
+            return False
         self._fade_i += 1
         if self._fade_in:
             factor = min(1.0, self._fade_i / self._fade_steps)
@@ -1527,6 +1538,10 @@ class ShowController:
 
     @staticmethod
     def _is_active(client: MpvClient) -> bool:
+        if getattr(client, "is_loading", False):
+            return True
+        if getattr(client, "has_loaded_media", False):
+            return True
         if client.props.get("idle-active") is True:
             return False
         path = client.props.get("path") or client.media_path
